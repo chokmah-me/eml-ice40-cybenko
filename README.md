@@ -1,5 +1,8 @@
 # eml-ice40-cybenko
 
+[![DOI](https://zenodo.org/badge/1220042425.svg)](https://doi.org/10.5281/zenodo.19736075)
+
+
 Code and data for:
 
 **Valid and False Snapping in EML Expression Trees: The Basin Selection Problem**
