@@ -1,7 +1,7 @@
+[![Paper DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.19736174.svg)](https://doi.org/10.5281/zenodo.19736174)
+[![Code DOI](https://img.shields.io/badge/DOI-10.17605%2FOSF.IO%2FVRYNM-blue)](https://doi.org/10.17605/OSF.IO/VRYNM)
+
 # eml-ice40-cybenko
-
-[![DOI](https://zenodo.org/badge/1220042425.svg)](https://doi.org/10.5281/zenodo.19736075)
-
 
 Code and data for:
 
