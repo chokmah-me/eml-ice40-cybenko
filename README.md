@@ -15,8 +15,7 @@ functions (exp, ln, sqrt) and four tree depths.
 ## Contents
 
 ```
-PAPER1_DRAFT_v2.md        paper source (markdown)
-PAPER1_DRAFT_v2.pdf       rendered paper (add after export)
+dyb-2026m-elm-basin.pdf       rendered paper (add after export)
 figure1_heatmap_v2.png    Figure 1
 snapping_v2_final.csv     full 240-run results
 eml_layer_v2.py           EML layer + tree implementation
