@@ -1,3 +1,6 @@
+[![Paper DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.19736174.svg)](https://doi.org/10.5281/zenodo.19736174)
+[![Code DOI](https://img.shields.io/badge/DOI-10.17605%2FOSF.IO%2FVRYNM-blue)](https://doi.org/10.17605/OSF.IO/VRYNM)
+
 # eml-ice40-cybenko
 
 Code and data for:
@@ -15,8 +18,7 @@ functions (exp, ln, sqrt) and four tree depths.
 ## Contents
 
 ```
-PAPER1_DRAFT_v2.md        paper source (markdown)
-PAPER1_DRAFT_v2.pdf       rendered paper (add after export)
+dyb-2026m-elm-basin.pdf       rendered paper (add after export)
 figure1_heatmap_v2.png    Figure 1
 snapping_v2_final.csv     full 240-run results
 eml_layer_v2.py           EML layer + tree implementation
