@@ -1,0 +1,28 @@
+cff-version: 1.2.0
+message: "If you use this code or data, please cite both the software (via the DOI below) and the accompanying paper."
+title: "eml-ice40-cybenko: code and data for Valid and False Snapping in EML Expression Trees"
+version: "1.0.0"
+date-released: "2026-04-24"
+authors:
+  - family-names: "Bilar"
+    given-names: "Daniyel Yaacov"
+    affiliation: "Chokmah LLC"
+    email: "chokmah-dyb@pm.me"
+license: MIT
+repository-code: "https://github.com/chokmah-me/eml-ice40-cybenko"
+keywords:
+  - "symbolic regression"
+  - "EML operator"
+  - "neural symbolic"
+  - "expression trees"
+  - "basin selection"
+  - "temperature annealing"
+preferred-citation:
+  type: article
+  title: "Valid and False Snapping in EML Expression Trees: The Basin Selection Problem"
+  authors:
+    - family-names: "Bilar"
+      given-names: "Daniyel Yaacov"
+      affiliation: "Chokmah LLC"
+  year: 2026
+  month: 4
