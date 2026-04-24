@@ -4,7 +4,7 @@
 
 by **Daniyel Yaacov Bilar**, Chokmah LLC, chokmah-dyb@pm.me
 
-v2.0.1 April 24 2026 (Hebrew font and typos, url to arXiv:2603.21852v2)
+v2.1 April 24 2026 (adds Sect. 4 connection to Odrzywolek SI warm-start evidence; extended reference list)
 
 <p class="hebrew-date" dir="rtl" lang="he">ז׳ אִייָר ותשפ״ו</p>
 
@@ -31,11 +31,11 @@ We use balanced binary EML trees. A tree of depth d has d-1 gate levels. Each ga
 Bottom-level selectors (level 0, directly above the tree inputs) choose from {1, x} using a 2-way softmax over learnable logits. Upper-level selectors choose from {1, x, f} where f is the output of a child gate, using a 3-way softmax. The total parameter count is 5 * 2^(d-1) - 6, matching Odrzywolek's formula.
 
 | Depth | Gate levels (d-1) | Selectors | Parameters |
-|-------|-------------------|-----------|------------|
-| 2 | 1 | 2 | 4 |
-| 3 | 2 | 6 | 14 |
-| 4 | 3 | 14 | 34 |
-| 5 | 4 | 30 | 74 |
+| ----- | ----------------- | --------- | ---------- |
+| 2     | 1                 | 2         | 4          |
+| 3     | 2                 | 6         | 14         |
+| 4     | 3                 | 14        | 34         |
+| 5     | 4                 | 30        | 74         |
 
 The EML gate clamps its first input to [-8, 8] before exponentiation and takes the real part of the complex-valued computation, which gives a smooth extension for negative arguments to ln.
 
@@ -87,13 +87,13 @@ Mean max-weight across selectors (our "snappability" metric) is 1.000 for every 
 
 **Table 1. Valid snap counts (out of 20 seeds, except exp d=5 with 18 non-NaN).**
 
-| | d=2 | d=3 | d=4 | d=5 | Min depth to represent |
-|---------|-----|-----|-----|------|------------------------|
-| exp(x) | 5 | 4 | 17 | 11 | 2 |
-| ln(x) | 0 | 0 | 18 | 5 | 4 |
-| sqrt(x) | 0 | 0 | 0 | 0 | 9+ |
+|         | d=2  | d=3  | d=4  | d=5  | Min depth to represent |
+| ------- | ---- | ---- | ---- | ---- | ---------------------- |
+| exp(x)  | 5    | 4    | 17   | 11   | 2                      |
+| ln(x)   | 0    | 0    | 18   | 5    | 4                      |
+| sqrt(x) | 0    | 0    | 0    | 0    | 9+                     |
 
-![Figure 1: Valid snap rate by function and depth. Cell entries give valid-snap count / total non-NaN runs. Black borders mark each function's minimum representational depth.](figure1_heatmap_v2.png)
+![Figure 1: Valid snap rate by function and depth. Cell entries give valid-snap count / total non-NaN runs. Black borders mark each function's minimum representational depth.](./figure1_heatmap_v2.png)
 
 Three patterns:
 
@@ -135,6 +135,24 @@ The three-phase protocol decouples two problems. Temperature annealing solves co
 
 Competing forms are not arbitrary. eml(x,x) = exp(x) - ln(x) is a genuine local minimum on the exp training surface, with MAE 0.688 on [-2, 2] compared to MAE 0 for eml(x,1). During phase 1 the continuous optimizer may descend into its basin. Phases 2 and 3 then commit to whatever vertex is nearest, without basin-jumping. The critical phase for correctness is phase 1. Methods that improve basin selection during phase 1 (better initialization, curriculum training, warm-starting from solved subtrees) may improve valid snap rates without changing the annealing protocol.
 
+### Connection to Odrzywolek's warm-start evidence
+
+The Supplementary Information released with Odrzywolek (2026) provides independent support for the basin-selection framing. His Table S7 reports that trees initialized from the known correct expression plus Gaussian logit noise (sigma = 12) recover the target at 100% for depth 5 and depth 6 (4 of 4 runs at each depth, snapped MSE near 1e-32). In his own words, "the correct solutions are stable attractors. The practical barrier at depths >= 5 is not the representation itself but the exponentially growing number of local minima that trap random initializations." That is the same conclusion we reach from the blind-initialization side. Commitment is not the bottleneck. Basin selection is.
+
+A direct rate comparison is informative but requires care because the target functions differ. Odrzywolek trains against nested EML self-compositions of depth d (his Table S4), so representational depth and tree depth grow together; we train against fixed targets (exp, ln) with representational depths 2 and 4, so the ratio of tree depth to representational depth varies across our grid.
+
+| Source                                                     | d=2  | d=3   | d=4   | d=5   |
+| ---------------------------------------------------------- | ---- | ----- | ----- | ----- |
+| Odrzywolek Table S5, blind runs, target depth = tree depth | 100% | 26.6% | 23.4% | 0.89% |
+| This work, blind runs, exp(x), representational depth 2    | 25%  | 20%   | 85%   | 61%   |
+| This work, blind runs, ln(x), representational depth 4     | 0%   | 0%    | 90%   | 25%   |
+
+![Figure 2: Blind-recovery rate comparison. Grouped bars show blind-initialization success rates from Odrzywolek SI Table S5 (grey; target depth matches tree depth) and this work (orange = exp(x) at representational depth 2; blue = ln(x) at representational depth 4). Black stars mark the matched-depth cells. Denominators: Odrzywolek 32, 64, 64, 448; this work 20 except exp d=5 (18 after NaN).](./figure2_rate_comparison.png)
+
+The patterns are consistent once representational depth is controlled. When the tree exactly matches the target's representational depth (Odrzywolek at every row; our ln at d=4) recovery is high. When the tree is over-depth, the consequence depends on basin geometry: for our exp(x) the extra gates help by routing around the eml(x,x) competitor (d=4 peak at 85%); for Odrzywolek's self-composition targets at d>=5 the combinatorial count of incorrect forms dominates and recovery collapses.
+
+A separate concern the Odrzywolek SI raises is numerical impostors: expressions that agree with the target to within one unit in the last place at IEEE 754 double precision but fail at 64-digit or higher precision (SI Sect. 1.2). His reported impostor example, eml(eml(eml(1,eml(0,eml(A,gamma))),eml(gamma,A)),eml(1,1)), evaluates to about -0.9999999999999998. Our validity criterion is post-snap MAE < 0.01 in double precision, and our false snaps all sit at post-snap MAE >= 0.688. The gap between our threshold and our competing basins is about fourteen orders of magnitude wide, so impostors cannot pass our filter with the current target set. If future work tightens the threshold (toward exact symbolic recovery) or extends to targets whose competing basins are numerically closer, a 128-digit mpmath re-check in the style of SI Sect. 2.2 should be added as a post-processing pass. The risk is not present for (exp, ln, sqrt) at MAE=0.01.
+
 ### Depth effects differ per function
 
 Pure configuration counting predicts deeper trees should be worse for all functions: at d=2, d=3, d=4, d=5 the number of snapped forms is 4, 144, 186,624, and roughly 3.1 x 10^11 respectively. ln follows this pattern (peak at d=4, drop at d=5). exp does not: recovery climbs sharply from d=2 (5/20) and d=3 (4/20) to d=4 (17/20), then drops back to d=5 (11/18). The difference from ln lies in basin geometry at the minimal depth. For ln at d=4, the continuous loss surface makes the correct basin large and few competitors are close, so the optimizer routinely finds it. For exp at d=2 and d=3, the competing basin eml(x,x) dominates (15/20 at d=2, 10/20 at d=3 despite the larger configuration space). Only at d=4 does the tree have enough free structure to escape that basin. The d=5 drop-off matches ln's: extra depth past the escape point starts costing valid snaps again.
@@ -155,6 +173,8 @@ All code (`eml_layer_v2.py`, `experiment_v2.py`) and the full 240-run results CS
 
 ## References
 
-Odrzywolek, A. (2026).  [All elementary functions from a single binary operator](https://arxiv.org/pdf/2603.21852) arXiv:2603.21852v2
+Odrzywolek, A. (2026). [All elementary functions from a single binary operator](https://arxiv.org/pdf/2603.21852) arXiv:2603.21852v2. Main text and Supplementary Information.
 
-Cited for: the EML operator eml(x,y) = exp(x) - ln(y); functional completeness over elementary functions on the reals; the parameter count 5 * 2^(d-1) - 6 for balanced binary EML trees; exp(x) = eml(x,1) at minimum depth; the representation of ln(x) via an unbalanced 6-gate RPN tree; the 35+ gate lower bound for sqrt(x).
+Cited from main text for: the EML operator eml(x,y) = exp(x) - ln(y); functional completeness over elementary functions on the reals; the parameter count 5 * 2^(d-1) - 6 for balanced binary EML trees; exp(x) = eml(x,1) at minimum depth; the representation of ln(x) via an unbalanced 6-gate RPN tree; the 35+ gate lower bound for sqrt(x).
+
+Cited from Supplementary Information for: the three-phase Gumbel-Softmax training pipeline (SI Sect. 3.3); the blind-recovery rates across depths 2 to 6 (SI Table S5); the warm-start recovery at 100% for depths 5 and 6 confirming correct solutions are stable attractors (SI Sect. 3.7, Table S7); the quote on local minima as the practical barrier (SI Sect. 3.9); the numerical-impostor example and the 128-digit mpmath safeguard (SI Sect. 1.2, 2.2).

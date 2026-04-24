@@ -1,30 +1,28 @@
 cff-version: 1.2.0
-message: "If you use this code or data, please cite both the software (via the DOI below) and the accompanying paper."
-title: "eml-ice40-cybenko: code and data for Valid and False Snapping in EML Expression Trees"
-version: "1.0.0"
-date-released: "2026-04-24"
-doi: "10.17605/OSF.IO/VRYNM"
+message: "If you use this software or data, please cite it as below."
 authors:
-  - family-names: "Bilar"
-    given-names: "Daniyel Yaacov"
-    affiliation: "Chokmah LLC"
-    email: "chokmah-dyb@pm.me"
+  - family-names: Bilar
+    given-names: Daniyel Yaacov
+    affiliation: Chokmah LLC
+    email: chokmah-dyb@pm.me
+title: "Valid and False Snapping in EML Expression Trees: The Basin Selection Problem"
+version: "2.1.0"
+date-released: "2026-04-24"
+url: "https://github.com/chokmah-me/dyb-2026m-elm-basin"
 license: MIT
-repository-code: "https://github.com/chokmah-me/eml-ice40-cybenko"
 keywords:
-  - "symbolic regression"
-  - "EML operator"
-  - "neural symbolic"
-  - "expression trees"
-  - "basin selection"
-  - "temperature annealing"
-preferred-citation:
-  type: article
-  title: "Valid and False Snapping in EML Expression Trees: The Basin Selection Problem"
-  doi: "10.5281/zenodo.19736174"
-  authors:
-    - family-names: "Bilar"
-      given-names: "Daniyel Yaacov"
-      affiliation: "Chokmah LLC"
-  year: 2026
-  month: 4
+  - symbolic regression
+  - expression trees
+  - EML operator
+  - basin selection
+  - FPGA
+  - iCE40
+references:
+  - type: article
+    authors:
+      - family-names: Odrzywolek
+        given-names: Andrzej
+    title: "All elementary functions from a single binary operator"
+    year: 2026
+    url: "https://arxiv.org/abs/2603.21852"
+    notes: "Foundational EML operator and bootstrapping construction. Supplementary Information cited for warm-start evidence (Table S7) and impostor example (Sect. 1.2)."

@@ -1,0 +1,6 @@
+depth,runs,successes,rate_percent,best_snapped_mse,source
+2,32,32,100.00,0.0,Odrzywolek 2026 SI Table S5
+3,64,17,26.5625,2.0e-31,Odrzywolek 2026 SI Table S5
+4,64,15,23.4375,2.0e-33,Odrzywolek 2026 SI Table S5
+5,448,4,0.8929,2.7e-32,Odrzywolek 2026 SI Table S5
+6,448,0,0.0,0.229,Odrzywolek 2026 SI Table S5 (best attempt, no valid snap)
