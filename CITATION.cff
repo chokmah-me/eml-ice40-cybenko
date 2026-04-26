@@ -6,9 +6,9 @@ authors:
     affiliation: Chokmah LLC
     email: chokmah-dyb@pm.me
 title: "Valid and False Snapping in EML Expression Trees: The Basin Selection Problem"
-version: "2.1.0"
+version: "2.2.0"
 date-released: "2026-04-24"
-url: "https://github.com/chokmah-me/dyb-2026m-elm-basin"
+url: "https://github.com/chokmah-me/eml-ice40-cybenko"
 license: MIT
 keywords:
   - symbolic regression

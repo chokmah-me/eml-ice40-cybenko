@@ -71,3 +71,7 @@ is published.
 
 Code released under MIT. See `LICENSE`.
 Paper and figures released under CC BY 4.0 (see Zenodo record metadata).
+
+## Changelog
+
+- **v2.2** (2026-04-24): Response to review feedback. Tones down novelty framing relative to Odrzywolek (no longer claims prior work conflated commitment and validity). Removes unsupported gradient-escape-routes mechanism claim. Softens "solves completely" to "solves across tested conditions". Explains 0.000 variance in exp d=2 false snaps.
