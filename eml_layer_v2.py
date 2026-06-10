@@ -13,8 +13,11 @@ Training (3-phase, matching Section 4.3):
   Phase 2 (20%): Adam + entropy penalty (forces weights toward vertices)
   Phase 3 (20%): temperature annealing T: 1.0 -> 0.05 (sharpens softmax)
 
-Valid snap: post-snap loss within 10x of pre-snap loss AND snappability>=0.9.
-False snaps (wrong vertex, high post-snap loss) are rejected.
+Valid snap (see train_eml): snapped (all selectors max_weight>=0.9) AND post_snap_loss < 0.01.
+The symbolic_form is recorded by callers for post-analysis and embedding diagnostics
+(pretrain_form column); it is *not* part of the automated filter in this implementation.
+For the targets here the <0.01 threshold already excludes known competing basins
+(e.g. eml(x,x) ~0.688 on exp). See paper for exact wording reconciliation.
 
 Naming vs Odrzywołek:
   His "level n" = our depth (n+1).
@@ -203,6 +206,21 @@ class EMLTree(nn.Module):
 
         return syms[0]
 
+    def verify_embedding(self, expected: str = None, warn: bool = True) -> str:
+        """Return current symbolic_form(); optionally assert/warn it matches expected.
+        Use after initialize_to_target or grow_from_shallow to catch wiring bugs before
+        expensive training. The pretrain_form column in basin_warmstart runs serves the
+        same purpose at data-capture time.
+        """
+        form = self.symbolic_form()
+        if expected is not None and form != expected:
+            msg = f"verify_embedding: got {form} != expected {expected}"
+            if warn:
+                print("WARNING:", msg)
+            else:
+                raise AssertionError(msg)
+        return form
+
     def initialize_to_target(self, func: str, noise: float = 0.0):
         """
         Warm-start / basin-selection helper (Track B).
@@ -239,38 +257,40 @@ class EMLTree(nn.Module):
                     right.bias_to_symbol('1', strength=6.0, noise=noise * 0.3)
 
         elif func == 'ln':
-            # Target: eml(1, eml(eml(1,x),1))  — needs 3 gate levels in balanced tree.
-            # We embed it along a "spine" (first gate at each level) using 'f' to chain,
-            # and set all sibling branches to harmless constants.
+            # Target: eml(1, eml(eml(1,x),1))  — the 3-gate expression from Odrzywolek S7.
+            # For any depth d>=4 (nlev>=3): plant the core at the *top 3 levels* using
+            # direct '1'/'x' injection at the core entry (right-half path for polarity match)
+            # and 'f' routing that actually connects (right-child pull at each step).
+            # All lower levels (below core entry) are harmless constants. This guarantees
+            # the pre-training symbolic_form() resolves to the exact target form (connected).
+            # See grow_from_shallow for the curriculum (full-subtree embed) path.
             nlev = len(self.levels)
-            # Bottom of the chain (the inner eml(1,x))
-            if nlev >= 1:
-                self.levels[0][0][0].bias_to_symbol('1', 8.0, noise)
-                self.levels[0][0][1].bias_to_symbol('x', 8.0, noise)
-            # Middle of the chain: eml( f , 1 )
-            if nlev >= 2:
-                self.levels[1][0][0].bias_to_symbol('f', 9.0, noise)   # from the inner
-                self.levels[1][0][1].bias_to_symbol('1', 8.0, noise)
-            # Top of the chain: eml( 1 , f )
-            if nlev >= 3:
-                top = nlev - 1
-                self.levels[top][0][0].bias_to_symbol('1', 9.0, noise)
-                self.levels[top][0][1].bias_to_symbol('f', 9.0, noise)
+            if nlev < 3:
+                self.randomize(0.1)
+                return
+            core0 = nlev - 3  # entry lev for core "bottom"; widths at top-3 are always 4/2/1
+            # Core bottom (gi=2 in 4-wide): direct eml(1, x) injection (ignores its children)
+            if core0 >= 0 and len(self.levels[core0]) > 2:
+                self.levels[core0][2][0].bias_to_symbol('1', 8.0, noise)
+                self.levels[core0][2][1].bias_to_symbol('x', 8.0, noise)
+            # Core mid (lev core0+1, gi=1 in 2-wide): f from the core-bottom output (lc=...[2])
+            mlev = core0 + 1
+            if mlev < nlev and len(self.levels[mlev]) > 1:
+                self.levels[mlev][1][0].bias_to_symbol('f', 9.0, noise)
+                self.levels[mlev][1][1].bias_to_symbol('1', 8.0, noise)
+            # Core top (lev core0+2 == tree top, gi=0): eml(1, f) pulling the mid via rc
+            tlev = core0 + 2
+            if tlev < nlev and len(self.levels[tlev]) > 0:
+                self.levels[tlev][0][0].bias_to_symbol('1', 9.0, noise)
+                self.levels[tlev][0][1].bias_to_symbol('f', 9.0, noise)
 
-            # All other (sibling / extra) selectors → constant '1'
+            # All other selectors (lower levels, unused core gates, siblings) → '1'
             for lev_idx, lev in enumerate(self.levels):
                 for gidx, (left, right) in enumerate(lev):
-                    # Skip the ones we just set on the spine
-                    if (lev_idx == 0 and gidx == 0) or \
-                       (lev_idx == 1 and gidx == 0) or \
-                       (lev_idx == nlev-1 and gidx == 0):
+                    if (lev_idx == core0 and gidx == 2) or (lev_idx == mlev and gidx == 1) or (lev_idx == tlev and gidx == 0):
                         continue
                     left.bias_to_symbol('1', strength=5.0, noise=noise * 0.25)
                     right.bias_to_symbol('1', strength=5.0, noise=noise * 0.25)
-
-            # If we have more levels than 3 (e.g. d=5 has 4 levels), the extra top level
-            # should forward the result from below (already handled by the top-of-chain
-            # logic above picking the last level).
 
         else:
             self.randomize(0.1)
@@ -364,33 +384,50 @@ class EMLTree(nn.Module):
                     self.levels[lev_idx][gidx][1].bias_to_symbol('1', 7.0, noise * 0.1)
 
         else:
-            # ln-style or general: embed the full shallow chain along the first spine
-            # of the deep tree's bottom `shallow.depth` levels.
-            # Then extend the 'f' chain upward for any extra levels.
+            # ln-style / general curriculum embed: copy the *full* shallow subtree block
+            # (all gates at each level, left-aligned) into the deep tree. This preserves
+            # any width used by the valid shallow (including right-half paths for ln form).
+            # Internal 'f' references remain valid because child 2*gi positions match within block.
+            # Then extend a forwarding 'f' on the first extra upper level's g0 (left, since
+            # left-align reduction lands in current[0] slot), siblings const.
+            # Record metadata so reanneal_extra_capacity can freeze the *entire* embedded
+            # block (not just g0) and only sharpen true extras + new-lev siblings.
             n_shallow_lev = len(shallow.levels)
+            embedded_widths = []
             for si in range(n_shallow_lev):
-                if si < len(self.levels) and len(shallow.levels[si]) > 0:
-                    # Copy the first gate's two selectors from shallow
-                    s_l, s_r = shallow.levels[si][0]
-                    self.levels[si][0][0].bias_to_symbol(s_l.symbol(), 7.5, noise)
-                    self.levels[si][0][1].bias_to_symbol(s_r.symbol(), 7.5, noise)
+                if si < len(self.levels):
+                    n_g = len(shallow.levels[si])
+                    embedded_widths.append(n_g)
+                    for gi in range(n_g):
+                        if gi < len(self.levels[si]):
+                            s_l, s_r = shallow.levels[si][gi]
+                            self.levels[si][gi][0].bias_to_symbol(s_l.symbol(), 7.5, noise)
+                            self.levels[si][gi][1].bias_to_symbol(s_r.symbol(), 7.5, noise)
+                else:
+                    embedded_widths.append(0)
 
-            # Extend 'f' chain through any extra upper levels
+            # Forwarding for extra upper levels (left-align => use left f to pull current[0])
             for lev_idx in range(n_shallow_lev, len(self.levels)):
                 if len(self.levels[lev_idx]) > 0:
                     l, r = self.levels[lev_idx][0]
-                    l.bias_to_symbol('f', 7.0, noise * 0.5)  # continue the chain
+                    l.bias_to_symbol('f', 7.0, noise * 0.5)
                     r.bias_to_symbol('1', 5.0, noise * 0.3)
 
-            # Make sure all other (sibling) gates at every level are constant
+            # Const everything outside the copied block + outside the extension g0
             for lev_idx, lev in enumerate(self.levels):
+                w = embedded_widths[lev_idx] if lev_idx < len(embedded_widths) else 0
                 for gidx, (left, right) in enumerate(lev):
-                    if lev_idx < n_shallow_lev and gidx == 0:
-                        continue  # spine already set
+                    if lev_idx < n_shallow_lev and gidx < w:
+                        continue  # copied embedded
                     if lev_idx >= n_shallow_lev and gidx == 0:
-                        continue  # extension spine
+                        continue  # extension forward gate
                     left.bias_to_symbol('1', 5.0, noise * 0.2)
                     right.bias_to_symbol('1', 5.0, noise * 0.2)
+
+            # Metadata for reanneal + debugging (pretrain_form will catch wiring issues)
+            self._embedded_nlev = n_shallow_lev
+            self._embedded_widths = embedded_widths
+            self._embedded_from_shallow_depth = getattr(shallow, 'depth', None)
 
     def reanneal_extra_capacity(self, epochs: int = 300, lr: float = 0.001, anneal_temp_final: float = 0.05, verbose: bool = False):
         """
@@ -412,29 +449,56 @@ class EMLTree(nn.Module):
         if not self.levels:
             return
 
-        # Freeze the active spine (first gate per level) by giving them extreme bias toward their current symbol.
+        # Determine embedded region (from grow_from_shallow metadata or legacy single-spine)
+        if hasattr(self, '_embedded_widths') and hasattr(self, '_embedded_nlev'):
+            emb_ws = self._embedded_widths
+            n_emb = self._embedded_nlev
+        else:
+            emb_ws = [1] * len(self.levels)
+            n_emb = len(self.levels)
+
+        # Freeze the embedded block (full widths) + extension forward g0. 
+        # Only true extras (embedded siblings + new-lev non-forward) get re-annealed.
         frozen_values = []
         for lev_idx, lev in enumerate(self.levels):
             if len(lev) == 0:
                 continue
-            left, right = lev[0]
-            for sel in (left, right):
-                sym = sel.symbol()
-                idx = ['1', 'x', 'f'].index(sym)
-                old_logits = sel.logits.detach().clone()
-                frozen_values.append((sel, old_logits))
-                with torch.no_grad():
-                    sel.logits.fill_(-20.0)
-                    sel.logits[idx] = 20.0
+            w = emb_ws[lev_idx] if lev_idx < len(emb_ws) else 0
+            for gidx in range(min(w, len(lev))):
+                left, right = lev[gidx]
+                for sel in (left, right):
+                    sym = sel.symbol()
+                    idx = ['1', 'x', 'f'].index(sym)
+                    old_logits = sel.logits.detach().clone()
+                    frozen_values.append((sel, old_logits))
+                    with torch.no_grad():
+                        sel.logits.fill_(-20.0)
+                        sel.logits[idx] = 20.0
+            # Extra levels: freeze their forward g0 too (preserve the link)
+            if lev_idx >= n_emb and len(lev) > 0:
+                left, right = lev[0]
+                for sel in (left, right):
+                    # avoid dup if w==1 already covered it
+                    if any(id(fv[0]) == id(sel) for fv in frozen_values):
+                        continue
+                    sym = sel.symbol()
+                    idx = ['1', 'x', 'f'].index(sym)
+                    old_logits = sel.logits.detach().clone()
+                    frozen_values.append((sel, old_logits))
+                    with torch.no_grad():
+                        sel.logits.fill_(-20.0)
+                        sel.logits[idx] = 20.0
 
         # Now run a short temperature-anneal *only on the extra selectors*.
-        # We temporarily set a high temperature and let only the extra gates move.
         original_temps = [s.temperature for lev in self.levels for pair in lev for s in pair]
         extra_selectors = []
         for lev_idx, lev in enumerate(self.levels):
+            w = emb_ws[lev_idx] if lev_idx < len(emb_ws) else 0
             for gidx, (left, right) in enumerate(lev):
-                if gidx == 0:
-                    continue  # spine = embedded
+                if lev_idx < n_emb and gidx < w:
+                    continue  # embedded core block (frozen above)
+                if lev_idx >= n_emb and gidx == 0:
+                    continue  # extension forward gate (keep f-link)
                 extra_selectors.extend([left, right])
 
         if not extra_selectors:
@@ -507,7 +571,9 @@ def train_eml(tree: EMLTree, x_data: torch.Tensor, y_data: torch.Tensor,
     Phase 2 (20%): task loss + entropy penalty (coeff ramps 0 -> entropy_coeff).
     Phase 3 (20%): task loss + full entropy penalty + temperature anneal T->anneal_temp_final.
 
-    Valid snap check: post-snap loss must be <= 10x pre-snap loss.
+    Valid snap check: snapped (max_weight >=0.9 on every selector) AND post-snap MAE < 0.01.
+    (See module docstring and paper for the exact criterion used by the released CSV;
+    symbolic form is analyzed offline via the form columns, not enforced here.)
     """
     tree.train()
     tree.set_temperature(1.0)

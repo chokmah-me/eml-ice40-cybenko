@@ -12,10 +12,10 @@ This directory contains the data snapshot for the Track B short note iteration (
 - Modes: blind, warm (refined top-gate), curriculum (grow_from_shallow + reanneal_extra_capacity).
 - Helper: `analyze_basin_rates.py` (stdlib CSV stats) + `make_basin_figures.py` used for rates/figure.
 
-**Key results visible in the data (final, post 20-seed control)**:
-- exp d=2: blind 17% (1/6), warm 100% (6/6)
-- exp d=3 (20-seed control batch for the new 20 seeds): blind 8/20 (40%), warm 20/20 (100%, all `eml(x,1)`), curriculum 20/20 (100%, all `eml(x,1)`). Cumulative: blind ~15.5% (11/71), warm ~91.5% (65/71), curriculum ~73% (32/44).
-- ln d=5 (first-class boundary case, now with full 20-seed + 400-epoch data): 0% for warm (66/66) and curriculum (54/54); blind ~7.6% (5/66, a few sporadic). *Every* curriculum and warm run collapses to the identical form `eml(1,eml(1,1))`. The 20-seed control (reanneal 200) gave ln curriculum 0/20 and warm 0/20, all same form. The 400-epoch tuning also 0/10 curriculum. The note treats this as an equal partner: spine embedding succeeds (see code), yet the constant attractor dominates for ln at d=5.
+**Key results visible in the data (v2.3 diagnostic snapshot, post 20-seed control)**:
+- exp d=2/3 results stand (warm/curric strong rescue; forms clean on the curriculum side).
+- ln d=5: 0% warm (66/66 all `eml(1,eml(1,1))`), 0% curriculum (54/54 same); blind 5/66 with varied real forms (incl. one valid `eml(1,eml(eml(1,x),1))`). 
+- **Audit finding (post-capture):** the ln warm/curriculum 100% collapse was caused by the embedding code (initialize_to_target + first-gate grow produced trivial pretrain form; f did not pull the core chain). Blind > "informed". The tree/driver now fixed (connected core for any d, full-block grow, pretrain_form column, verify guard, hash-free seed). This snapshot is the pre-fix diagnostic corpus. Re-run ln:5 (and control) with corrected source + fresh CSV for the Zenodo numbers. See note for exact before/after and code pointers.
 
 **Reproducibility (documented in the note and manifest)**:
 See `notes/basin_selection_warmstart_note.md`, `results/track_b_initial.md`, and the parent `results/basin_warmstart_v2.3_manifest.md` (or the live CSV header comments) for the exact commands used (including the 20-seed control and 400-epoch ln tuning).

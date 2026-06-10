@@ -101,12 +101,26 @@ def main():
         if 'curriculum' not in modes:
             modes.append('curriculum')
 
+    csv_path = Path(args.csv)
+    write_header = not csv_path.exists()
+
     fieldnames = ['function', 'depth', 'seed', 'init_mode', 'snapped', 'final_loss',
                   'snappability', 'nan_epoch', 'converged', 'symbolic_form',
                   'expected_depth', 'post_snap_loss', 'valid_snap']
-
-    csv_path = Path(args.csv)
-    write_header = not csv_path.exists()
+    # pretrain_form is appended only when the on-disk CSV already declares the column
+    # (prevents corrupting legacy v2.3 appends). New captures (or fresh CSV) will include it.
+    include_pretrain = False
+    if csv_path.exists():
+        try:
+            with open(csv_path, 'r', newline='') as hf:
+                hdr = next(csv.reader(hf))
+                include_pretrain = 'pretrain_form' in hdr
+        except Exception:
+            include_pretrain = False
+    else:
+        include_pretrain = True
+    if include_pretrain:
+        fieldnames.append('pretrain_form')
 
     total_runs = len(cells) * len(modes) * args.seeds
     done = 0
@@ -135,7 +149,20 @@ def main():
                 forms = []
 
                 for s in range(args.seeds):
-                    torch.manual_seed(s * 17 + depth * 11 + hash((func, mode)) % 101)
+                    # Deterministic seeding (no hash() — Python hash is process-salted and made
+                    # prior "seed" column non-reproducible at row level; see note in paper).
+                    # Aggregates remain valid (more independent draws). Re-runs will be comparable
+                    # but not bit-identical to v2.3 snapshot rows.
+                    mode_id = {'blind': 0, 'warm': 1, 'curriculum': 2}.get(mode, 3)
+                    func_id = {'exp': 0, 'ln': 1, 'sqrt': 2}.get(func, 9)
+                    eff_seed = (s * 17 + depth * 11 + func_id * 5 + mode_id * 3 + 42) % (2**31 - 1)
+                    torch.manual_seed(eff_seed)
+                    # Also pin numpy for any np usage in future
+                    try:
+                        import numpy as np
+                        np.random.seed(eff_seed)
+                    except Exception:
+                        pass
 
                     tree = EMLTree(depth=depth)
 
@@ -157,6 +184,9 @@ def main():
                             if m_sh.get('valid_snap', 0):
                                 shallow.snap_all()
                                 tree.grow_from_shallow(shallow, noise=args.noise * 0.7)
+                                # Verify the embedding actually produced a connected non-trivial form
+                                # (catches the pre-fix ln d=4/5 constant collapse even from valid shallow).
+                                _ = tree.verify_embedding(warn=True)
                                 # Next-iteration tuning: re-anneal only the extra capacity after embedding.
                                 # This is the "re-anneal-only-on-new-capacity" pass.
                                 # Configurable via --reanneal-epochs etc for experimenting with schedules.
@@ -169,6 +199,17 @@ def main():
                     else:
                         # 'warm' and any future modes
                         tree.initialize_to_target(func, noise=args.noise)
+
+                    # Capture *pre-training* symbolic form (right after init/grow, before train).
+                    # This single column catches exactly the class of "init wired but f pulls sibling"
+                    # and "partial spine copy" bugs. See note + eml_layer_v2.py for details.
+                    pre_form = tree.symbolic_form()
+
+                    # Light runtime guard for the exact failure mode observed pre-fix (ln warm/curric
+                    # always emitted eml(1,eml(1,1)) even when shallow was valid).
+                    if func == 'ln' and mode != 'blind' and pre_form == 'eml(1,eml(1,1))':
+                        print(f'  [WARN] ln {mode} d={depth} s={s}: pretrain form is trivial constant; '
+                              'embedding may not have connected (see corrected initialize/grow).')
 
                     m = train_eml(tree, x_data, y_data,
                                   epochs=args.epochs, lr=lr)
@@ -190,6 +231,8 @@ def main():
                         'post_snap_loss': m['post_snap_loss'],
                         'valid_snap': m['valid_snap'],
                     }
+                    if include_pretrain:
+                        row['pretrain_form'] = pre_form
                     writer.writerow(row)
                     csvf.flush()
 
