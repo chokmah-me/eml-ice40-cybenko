@@ -88,6 +88,15 @@ class InputSelector(nn.Module):
         w = self.get_weights().clamp(1e-8, 1.0)
         return -(w * w.log()).sum()
 
+    def bias_to_symbol(self, sym: str, strength: float = 10.0, noise: float = 0.0):
+        """Strongly bias this selector toward one choice (for warm-start / basin experiments)."""
+        idx = ['1', 'x', 'f'].index(sym)
+        with torch.no_grad():
+            self.logits.fill_(0.0)
+            self.logits[idx] = strength
+            if noise > 0:
+                self.logits += torch.randn_like(self.logits) * noise
+
 
 # ============================================================================
 # 3. EML Tree
@@ -193,6 +202,168 @@ class EMLTree(nn.Module):
             syms = nxt
 
         return syms[0]
+
+    def initialize_to_target(self, func: str, noise: float = 0.0):
+        """
+        Warm-start / basin-selection helper (Track B).
+
+        Bias selectors toward the known-good symbolic form for the target function
+        (instead of blind random init). This matches the spirit of Odrzywolek SI Table S7
+        (correct solution + noise recovers at 100% even at high depth).
+
+        Improved embedding for over-depth (v2 improvement after first Track B runs):
+        - For exp at any depth: realize "eml(x,1)" *directly at the top gate* by routing
+          original x and constant 1 to the final inputs (this is how the original paper's
+          valid deeper exp solutions actually work — they don't compute a bottom eml(x,1)
+          and pass it up; they route x all the way to the top and set everything else constant).
+          All off-path selectors are biased to '1' (harmless constants).
+        - For ln: embed the 3-gate chain using a spine of 'f' selectors, with siblings constant.
+        """
+        if func == 'exp':
+            # Realize eml(x,1) directly at the root (top gate).
+            # Top gate = last level, first gate.
+            # One input gets direct 'x', the other gets direct '1'.
+            # Everything else in the tree is set to constant (both inputs '1').
+            top_lev = len(self.levels) - 1
+            # Bias the top gate itself
+            top_left, top_right = self.levels[top_lev][0]
+            top_left.bias_to_symbol('x', strength=9.0, noise=noise)
+            top_right.bias_to_symbol('1', strength=9.0, noise=noise)
+
+            # All other selectors (every other gate at every level) → constant '1'
+            for lev_idx, lev in enumerate(self.levels):
+                for gidx, (left, right) in enumerate(lev):
+                    if lev_idx == top_lev and gidx == 0:
+                        continue  # already set above
+                    left.bias_to_symbol('1', strength=6.0, noise=noise * 0.3)
+                    right.bias_to_symbol('1', strength=6.0, noise=noise * 0.3)
+
+        elif func == 'ln':
+            # Target: eml(1, eml(eml(1,x),1))  — needs 3 gate levels in balanced tree.
+            # We embed it along a "spine" (first gate at each level) using 'f' to chain,
+            # and set all sibling branches to harmless constants.
+            nlev = len(self.levels)
+            # Bottom of the chain (the inner eml(1,x))
+            if nlev >= 1:
+                self.levels[0][0][0].bias_to_symbol('1', 8.0, noise)
+                self.levels[0][0][1].bias_to_symbol('x', 8.0, noise)
+            # Middle of the chain: eml( f , 1 )
+            if nlev >= 2:
+                self.levels[1][0][0].bias_to_symbol('f', 9.0, noise)   # from the inner
+                self.levels[1][0][1].bias_to_symbol('1', 8.0, noise)
+            # Top of the chain: eml( 1 , f )
+            if nlev >= 3:
+                top = nlev - 1
+                self.levels[top][0][0].bias_to_symbol('1', 9.0, noise)
+                self.levels[top][0][1].bias_to_symbol('f', 9.0, noise)
+
+            # All other (sibling / extra) selectors → constant '1'
+            for lev_idx, lev in enumerate(self.levels):
+                for gidx, (left, right) in enumerate(lev):
+                    # Skip the ones we just set on the spine
+                    if (lev_idx == 0 and gidx == 0) or \
+                       (lev_idx == 1 and gidx == 0) or \
+                       (lev_idx == nlev-1 and gidx == 0):
+                        continue
+                    left.bias_to_symbol('1', strength=5.0, noise=noise * 0.25)
+                    right.bias_to_symbol('1', strength=5.0, noise=noise * 0.25)
+
+            # If we have more levels than 3 (e.g. d=5 has 4 levels), the extra top level
+            # should forward the result from below (already handled by the top-of-chain
+            # logic above picking the last level).
+
+        else:
+            self.randomize(0.1)
+
+    def bias_selector(self, lev: int, gidx: int, side: str, sym: str, strength: float = 8.0, noise: float = 0.0):
+        """Low-level hook for custom basin experiments: bias one specific selector."""
+        pair = self.levels[lev][gidx]
+        sel = pair[0] if side == 'left' else pair[1]
+        sel.bias_to_symbol(sym, strength, noise)
+
+    def grow_from_shallow(self, shallow: 'EMLTree', noise: float = 0.1):
+        """
+        Curriculum / grow-from-shallow helper for Track B.
+
+        Embeds a valid solution from a shallower tree into this deeper tree.
+        The shallow tree should typically be at the function's representational depth
+        and already valid (snapped to correct form).
+
+        Strategy:
+        - For exp: use the proven direct top-gate eml(x,1) bias, plus copy the shallow's
+          bottom eml(x,1) unit into one bottom gate of the deep tree (provides a "seed"
+          sub-computation that the network can route from if helpful).
+        - For ln: embed the shallow's full chain into the bottom `shallow.depth` levels
+          along the first spine, then chain 'f' upward through the extra levels, with
+          siblings set to constants.
+        - All new capacity gets light noise + constant bias.
+
+        This is the natural next lever after pure symbolic warm-start.
+        """
+        if self.depth <= shallow.depth:
+            # No growth needed
+            self.initialize_to_target('exp' if shallow.depth == 2 else 'ln', noise)
+            return
+
+        # Copy high-level target bias first (ensures top-level correctness)
+        # Determine func heuristically from depth or by trying both
+        # (in practice the caller knows; we default to the pattern that worked)
+        try:
+            # Prefer the one that gives non-constant top for the shallow
+            if shallow.depth <= 3:
+                self.initialize_to_target('exp', noise * 0.5)
+            else:
+                self.initialize_to_target('ln', noise * 0.5)
+        except Exception:
+            self.randomize(noise)
+
+        # Embed shallow structure
+        if shallow.depth == 2:
+            # exp-style: copy the single bottom gate's choices into one bottom gate here
+            if len(self.levels) > 0 and len(shallow.levels) > 0:
+                s_left, s_right = shallow.levels[0][0]
+                self.levels[0][0][0].bias_to_symbol(s_left.symbol(), 7.0, noise)
+                self.levels[0][0][1].bias_to_symbol(s_right.symbol(), 7.0, noise)
+
+            # For extra levels above the embedded unit, ensure a forwarding path
+            # (one spine of 'f' that can carry the bottom computation upward if the
+            #  optimizer finds it useful; the top direct x/1 bias is already set above)
+            for lev_idx in range(1, len(self.levels)):
+                # Bias the first gate on this level to take 'f' from the active child
+                # and constant on the other side
+                if len(self.levels[lev_idx]) > 0:
+                    l, r = self.levels[lev_idx][0]
+                    l.bias_to_symbol('f', 6.0, noise * 0.6)
+                    r.bias_to_symbol('1', 5.0, noise * 0.4)
+
+        else:
+            # ln-style or general: embed the full shallow chain along the first spine
+            # of the deep tree's bottom `shallow.depth` levels.
+            # Then extend the 'f' chain upward for any extra levels.
+            n_shallow_lev = len(shallow.levels)
+            for si in range(n_shallow_lev):
+                if si < len(self.levels) and len(shallow.levels[si]) > 0:
+                    # Copy the first gate's two selectors from shallow
+                    s_l, s_r = shallow.levels[si][0]
+                    self.levels[si][0][0].bias_to_symbol(s_l.symbol(), 7.5, noise)
+                    self.levels[si][0][1].bias_to_symbol(s_r.symbol(), 7.5, noise)
+
+            # Extend 'f' chain through any extra upper levels
+            for lev_idx in range(n_shallow_lev, len(self.levels)):
+                if len(self.levels[lev_idx]) > 0:
+                    l, r = self.levels[lev_idx][0]
+                    l.bias_to_symbol('f', 7.0, noise * 0.5)  # continue the chain
+                    r.bias_to_symbol('1', 5.0, noise * 0.3)
+
+            # Make sure all other (sibling) gates at every level are constant
+            for lev_idx, lev in enumerate(self.levels):
+                for gidx, (left, right) in enumerate(lev):
+                    if lev_idx < n_shallow_lev and gidx == 0:
+                        continue  # spine already set
+                    if lev_idx >= n_shallow_lev and gidx == 0:
+                        continue  # extension spine
+                    left.bias_to_symbol('1', 5.0, noise * 0.2)
+                    right.bias_to_symbol('1', 5.0, noise * 0.2)
 
 
 # ============================================================================
