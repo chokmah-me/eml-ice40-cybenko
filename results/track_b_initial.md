@@ -136,13 +136,15 @@ See session background task logs for output (or re-run the commands when ready).
 - 12-seed reanneal batch integrated (exp d=3 curriculum 12/12 100% clean `eml(x,1)` in batch / 50% cumul 12/24; warm 88% cumul 45/51).
 - 20-seed control run launched (bg task 019eb042-9cf8-7402-add6-6af0918c979c): `python basin_warmstart.py --seeds 20 --epochs 2000 --noise 0.4 --cells exp:3,ln:5 --reanneal-epochs 200`
 - ln:5 longer-reanneal tuning launched (bg task 019eb042-9f97-7221-94f1-1cbdbaff7b77): `... --seeds 10 --epochs 1500 --cells ln:5 --reanneal-epochs 400`
-- Analyzer `analyze_basin_rates.py` (stdlib) + `make_basin_figures.py` confirm current 234-row rates (see above).
+- System notification received for a different 20-seed bg task (019eb03c-dc89-7601-a4a1-7a5bf4a58fea, the one ending with `&`): completed in 1.77s, exit 0, **no output captured**, 0 effect on CSV. This was a stub/ineffective launch (shell backgrounding artifact); it added no rows or progress.
+- Real 20-seed bg (the explicitly launched one) progressing: 15/120 runs after ~3.3 min (progress printed every 5 runs). CSV at 254 rows (minor growth in exp:3 blind + ln:5 blind so far; full +120 expected only on completion). See live task output via get_command_or_subagent_output.
+- Analyzer `analyze_basin_rates.py` (stdlib) + `make_basin_figures.py` (re-run) confirm current rates (254 rows; exp d=3 curriculum still at prior 24 seeds / 50%, ln5 still 0%).
 - Figure re-generated + dropped to `notes/figure3_valid_rates_exp.png` (item 3).
 - Snapshot refreshed: new dated CSV copy in results/v2.3_basin_snapshot/ at launch time + README updated (item 4).
 - `plan.md` created with verbatim 5-item list + execution status (Section "Saved next-steps").
 - Skeleton polished (Table 1 with precise 51/24 N, abstract, observations, limitations, figure embed, reproducibility) (item 5).
 - track log + top README changelog + snapshot README updated.
-- Ready to integrate 20-seed rates (re-run analyzer/figures, update table/abstract/log/snapshot) once bg completes and CSV grows. Commits to follow on feature branch.
+- Ready to integrate 20-seed rates (re-run analyzer/figures, update table/abstract/log/snapshot) once the real bg completes and CSV grows substantially. Commits to follow on feature branch.
 
 See `plan.md` (saved 5-item next-steps verbatim) and todos. The exp-side (warm + curriculum + reanneal) is solid at current scales with clear diagnostic ("reanneal solved collapse"); ln d=5 remains 0% (bg + future unbalanced will inform). CSV will grow live from the bg runs; use `python analyze_basin_rates.py` post-run for integration numbers.
 
