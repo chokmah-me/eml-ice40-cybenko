@@ -65,7 +65,7 @@ We report results on the cells highlighted as difficult in v2.2 (exp at low dept
 | exp      | 2     | warm (direct top-gate x/1 + noise)| 6         | **100%** | All `eml(x,1)` |
 | exp      | 3     | blind                             | 12 (cumul)| 0%    | Various competing basins |
 | exp      | 3     | warm (refined top-gate embedding) | 12 (latest batch) + cumulative | **100%** (latest) / ~85% cumul | All `eml(x,1)` in 12-seed/1500-epoch batch |
-| exp      | 3     | curriculum (grow_from_shallow)    | 12 (latest) | 0% (this batch) | Forms contain correct inner `eml(x,1)` but extra wrappers (e.g. `eml(eml(x,1),eml(1,1))`); embedding succeeded but extra capacity did not fully collapse |
+| exp      | 3     | curriculum (grow_from_shallow + reanneal_extra_capacity) | 12 (this batch) / 24 cumul | **100% (this batch)** / 50% cumul | With the re-anneal-only-on-new-capacity pass: 12/12 (100%) valid `eml(x,1)` in the tuned batch. Cumulative 50% (prior non-reanneal curriculum runs were 0/12). Embedding + re-anneal succeeds in collapsing extra levels. |
 | ln       | 5     | blind                             | 12        | 0%    | Multiple incorrect deep nestings |
 | ln       | 5     | warm (spine)                      | 12        | 0%    | Heavy collapse to constants |
 | ln       | 5     | curriculum (grow_from_shallow)    | 12 (latest batch) | 0% | Still heavy collapse to constants (`eml(1,eml(1,1))`); curriculum injection not yet sufficient for this over-depth case |
@@ -77,10 +77,10 @@ Full per-run data are in `results/basin_warmstart.csv` (accumulated; includes cu
 - **Figure 2** (optional but strong): Example selector weight trajectories or final max-weight heatmaps for one blind failure vs. one warm success on exp d=2 (shows the basin avoidance visually).
 - **Figure 3** (if curriculum helps ln d=5): Same style as Fig 1 but for ln at d=4 (peak) and d=5, including curriculum bars.
 
-**Key observations (after 12-seed / 1500-epoch + curriculum batch)**
-- Warm (refined top-gate) initialization delivers 100% valid recovery for exp at both d=2 and d=3 in the latest higher-N batches — complete rescue of the cells that were hardest in the v2.2 blind runs.
-- Curriculum (`grow_from_shallow`) on exp d=3 successfully injects the correct shallow `eml(x,1)` core (visible in the symbolic forms as inner subexpressions), but the extra levels in the deeper tree did not fully prune to constants in this run length, resulting in over-wrapped but "almost correct" forms. This is encouraging evidence that the embedding works; more epochs or targeted re-annealing on new capacity may close the gap.
-- For ln at d=5, even with curriculum, we still see full collapse to constant subexpressions. This cell remains the outstanding challenge and will require further refinements to the grow logic or phase-1 interventions.
+**Key observations (after 12-seed/1200-epoch run with reanneal tuning)**
+- Warm (refined top-gate) initialization continues to deliver **100%** valid recovery for exp at both d=2 and d=3 in higher-N batches (this run: 12/12 on d=3; cumulative warm on d=3 now ~88%). Complete, reproducible rescue of the cells that were hardest in the v2.2 blind runs.
+- Curriculum with the new `reanneal_extra_capacity` pass (re-anneal only on extra selectors after embedding, spine frozen): **12/12 (100%)** valid `eml(x,1)` on exp d=3 in this batch. Cumulative curriculum on d=3 is 50% (prior non-reanneal curriculum runs were 0/12). The forms in the tuned batch are clean `eml(x,1)`. This validates that the combination of grow_from_shallow (core injection) + targeted re-anneal on new capacity solves the extra-level collapse problem observed previously.
+- For ln at d=5, curriculum (even with reanneal) remains 0/12 — still full collapse to constants (`eml(1,eml(1,1))`). This over-representational-depth case remains the outstanding challenge and the primary target for further tuning (e.g., more epochs on new capacity, different noise schedules, or unbalanced-tree support).
 
 ---
 
