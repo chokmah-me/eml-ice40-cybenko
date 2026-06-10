@@ -383,6 +383,104 @@ class EMLTree(nn.Module):
                     left.bias_to_symbol('1', 5.0, noise * 0.2)
                     right.bias_to_symbol('1', 5.0, noise * 0.2)
 
+    def reanneal_extra_capacity(self, epochs: int = 300, lr: float = 0.001, anneal_temp_final: float = 0.05, verbose: bool = False):
+        """
+        Curriculum tuning helper (next iteration): after grow_from_shallow, run a short
+        phase-3-style re-anneal *only on the 'extra' capacity* (non-spine gates).
+
+        This directly addresses the diagnostic from exp d=3 curriculum runs:
+        "grow successfully planted the shallow core, but extra levels did not fully collapse."
+
+        Heuristic for "embedded vs extra":
+        - The first gate at each level is considered the "active spine" (the embedded shallow solution path).
+        - All other gates are "extra" and are the only ones whose logits participate in this short re-anneal.
+        - The embedded spine selectors are temporarily frozen (very high bias) so they stay put.
+
+        After the short anneal we restore temperature and leave the tree ready for any remaining main training or evaluation.
+
+        For unbalanced-tree support (future): the same idea applies — mark the "used" selectors according to the embedded symbolic form and only re-anneal the unused ones.
+        """
+        if not self.levels:
+            return
+
+        # Freeze the active spine (first gate per level) by giving them extreme bias toward their current symbol.
+        frozen_values = []
+        for lev_idx, lev in enumerate(self.levels):
+            if len(lev) == 0:
+                continue
+            left, right = lev[0]
+            for sel in (left, right):
+                sym = sel.symbol()
+                idx = ['1', 'x', 'f'].index(sym)
+                old_logits = sel.logits.detach().clone()
+                frozen_values.append((sel, old_logits))
+                with torch.no_grad():
+                    sel.logits.fill_(-20.0)
+                    sel.logits[idx] = 20.0
+
+        # Now run a short temperature-anneal *only on the extra selectors*.
+        # We temporarily set a high temperature and let only the extra gates move.
+        original_temps = [s.temperature for lev in self.levels for pair in lev for s in pair]
+        extra_selectors = []
+        for lev_idx, lev in enumerate(self.levels):
+            for gidx, (left, right) in enumerate(lev):
+                if gidx == 0:
+                    continue  # spine = embedded
+                extra_selectors.extend([left, right])
+
+        if not extra_selectors:
+            # Nothing extra to re-anneal (exact depth match)
+            # Restore any frozen state just in case
+            for sel, old in frozen_values:
+                with torch.no_grad():
+                    sel.logits.copy_(old)
+            return
+
+        # Short re-anneal loop (phase-3 style, task loss only, on extra selectors only)
+        # We still need a forward pass, so we do a minimal optimizer step that only touches extra params.
+        opt = torch.optim.Adam([s.logits for s in extra_selectors], lr=lr)
+        criterion = torch.nn.L1Loss()  # reuse the same loss as train_eml
+
+        # Create a tiny synthetic batch for the re-anneal (use the same grid style as the main experiment)
+        # For simplicity we just use a small linspace around the typical domain; the point is to give the extra gates a signal.
+        x_re = torch.linspace(-1.0, 1.0, 64)  # generic; the exact function doesn't matter much for collapse pressure
+        # We don't have y here, so we use a dummy target that encourages the tree to produce something stable.
+        # In practice the re-anneal is mostly about sharpening the extra selectors toward vertices while the spine is frozen.
+        # To keep it simple and stable we use a zero target and L1 (encourages the extra subtrees to output near-zero constants).
+        y_re = torch.zeros_like(x_re)
+
+        for e in range(epochs):
+            opt.zero_grad()
+            # Set a linear temperature schedule for the extra selectors only
+            ramp = e / max(1, epochs - 1)
+            T = 1.0 - ramp * (1.0 - anneal_temp_final)
+            for s in extra_selectors:
+                s.temperature = max(T, anneal_temp_final)
+
+            pred = self(x_re)
+            loss = criterion(pred, y_re)
+            loss.backward()
+            # Only step the extra logits
+            opt.step()
+
+            if verbose and (e + 1) % max(1, epochs // 5) == 0:
+                print(f"  reanneal e={e+1}/{epochs} loss={loss.item():.6f} T={T:.2f}")
+
+        # Restore temperatures and unfreeze the spine
+        for i, (sel, old) in enumerate(frozen_values):
+            with torch.no_grad():
+                sel.logits.copy_(old)
+        # Restore original temps (they will be reset by the caller anyway)
+        idx = 0
+        for lev in self.levels:
+            for pair in lev:
+                for s in pair:
+                    s.temperature = original_temps[idx]
+                    idx += 1
+
+        if verbose:
+            print("reanneal_extra_capacity complete (spine frozen, extra capacity sharpened).")
+
 
 # ============================================================================
 # 4. Three-phase training

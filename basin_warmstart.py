@@ -154,6 +154,9 @@ def main():
                             if m_sh.get('valid_snap', 0):
                                 shallow.snap_all()
                                 tree.grow_from_shallow(shallow, noise=args.noise * 0.7)
+                                # Next-iteration tuning: re-anneal only the extra capacity after embedding.
+                                # This is the "re-anneal-only-on-new-capacity" pass.
+                                tree.reanneal_extra_capacity(epochs=200, lr=0.001, verbose=False)
                             else:
                                 # Fallback to best direct warm
                                 tree.initialize_to_target(func, noise=args.noise)

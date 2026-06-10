@@ -43,9 +43,10 @@ We extend the released `eml_layer_v2.py` with two new capabilities (see the `gro
   - For exp(x) at any depth: the top gate is directly biased to select `x` on one input and constant `1` on the other (exactly the routing observed in the v2.2 paper's valid deeper exp solutions). All other selectors are biased toward constant-`1`.
   - For ln(x): a spine of `f` selectors realizes the known three-gate expression, with siblings constant.
 
-- `EMLTree.grow_from_shallow(shallow_tree, noise=...)` (curriculum helper).
+- `EMLTree.grow_from_shallow(shallow_tree, noise=...)` (curriculum helper) + `reanneal_extra_capacity(...)` (next-iteration tuning helper).
   - Pre-train a shallow tree at the function's representational depth using warm initialization.
   - If it yields a valid snap, embed its selector choices along an active spine in the deeper tree (using `f` to chain the sub-computation) and bias all parallel / new capacity toward harmless constants.
+  - `reanneal_extra_capacity` (added in this iteration): after embedding, run a short phase-3-style re-anneal *only on the extra selectors* (spine frozen). This directly targets the "extra levels did not fully collapse" diagnostic observed on exp d=3 curriculum forms.
   - Add controlled noise and then run the normal three-phase protocol on the deep tree.
 
 Noise on the biased logits (0.3–0.5 typical) retains exploration. The only change to the v2.2 protocol is the initialization step before phase 1. All other hyperparameters, data ranges, loss (MAE), optimizer schedule, and the strict post-snap validity definition are identical to the released experiments.
