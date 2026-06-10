@@ -97,7 +97,11 @@ The intervention is deliberately minimal: no schedule changes, no extra loss ter
 - Only two functions tested so far; the ln d=5 case remains unsolved by simple embedding.
 - The CSV mixes two slightly different embedding versions for exp d=3.
 
-A full note would re-run the key cells at the paper's original 20 seeds / 2000 epochs, add more functions or depths, and include loss curves or selector-trajectory visualizations.
+A full note would re-run the key cells at the paper's original 20 seeds / 2000 epochs (see `python basin_warmstart.py --seeds 20 --epochs 2000 ...`), add the mpmath high-precision filter suggested in v2.2 limitations, and include loss curves or selector-trajectory visualizations.
+
+Figures can be regenerated with:
+  python make_basin_figures.py
+(after ensuring results/basin_warmstart.csv contains the desired batches).
 
 ---
 

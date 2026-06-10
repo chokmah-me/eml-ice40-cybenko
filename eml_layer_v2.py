@@ -336,6 +336,24 @@ class EMLTree(nn.Module):
                     l.bias_to_symbol('f', 6.0, noise * 0.6)
                     r.bias_to_symbol('1', 5.0, noise * 0.4)
 
+            # Next-iteration tuning: for exp curriculum, re-assert a *very strong*
+            # direct top-gate x/1 bias after embedding. This prioritizes the proven
+            # "route original x at the top" strategy (per v2.2 paper) while still
+            # providing the shallow core as a secondary basin seed in lower levels.
+            # The extra levels get an extra nudge to constant to encourage collapse.
+            top_lev = len(self.levels) - 1
+            if top_lev >= 0 and len(self.levels[top_lev]) > 0:
+                tl, tr = self.levels[top_lev][0]
+                tl.bias_to_symbol('x', 9.5, noise * 0.2)
+                tr.bias_to_symbol('1', 9.5, noise * 0.2)
+            # Nudge all non-spine gates in extra levels even harder to constant
+            for lev_idx in range(1, len(self.levels)):
+                for gidx in range(len(self.levels[lev_idx])):
+                    if gidx == 0:
+                        continue
+                    self.levels[lev_idx][gidx][0].bias_to_symbol('1', 7.0, noise * 0.1)
+                    self.levels[lev_idx][gidx][1].bias_to_symbol('1', 7.0, noise * 0.1)
+
         else:
             # ln-style or general: embed the full shallow chain along the first spine
             # of the deep tree's bottom `shallow.depth` levels.
