@@ -136,8 +136,13 @@ See session background task logs for output (or re-run the commands when ready).
 - 12-seed reanneal batch integrated (exp d=3 curriculum 12/12 100% clean `eml(x,1)` in batch / 50% cumul 12/24; warm 88% cumul 45/51).
 - 20-seed control run launched (bg task 019eb042-9cf8-7402-add6-6af0918c979c): `python basin_warmstart.py --seeds 20 --epochs 2000 --noise 0.4 --cells exp:3,ln:5 --reanneal-epochs 200`
 - ln:5 longer-reanneal tuning launched (bg task 019eb042-9f97-7221-94f1-1cbdbaff7b77): `... --seeds 10 --epochs 1500 --cells ln:5 --reanneal-epochs 400`
-- System notification received for a different 20-seed bg task (019eb03c-dc89-7601-a4a1-7a5bf4a58fea, the one ending with `&`): completed in 1.77s, exit 0, **no output captured**, 0 effect on CSV. This was a stub/ineffective launch (shell backgrounding artifact); it added no rows or progress.
-- Real 20-seed bg (the explicitly launched one) progressing: 15/120 runs after ~3.3 min (progress printed every 5 runs). CSV at 254 rows (minor growth in exp:3 blind + ln:5 blind so far; full +120 expected only on completion). See live task output via get_command_or_subagent_output.
+- System notifications received for stub bg tasks (launched with trailing `&`):
+  - 019eb03c-dc89-7601-a4a1-7a5bf4a58fea (20-seed cmd): 1.77s, exit 0, no output, 0 effect.
+  - 019eb03c-df30-7bd3-867e-38356bdf6aa5 (ln:5 400-epoch cmd): 1.70s, exit 0, no output, 0 effect.
+  These are shell backgrounding artifacts (PSJob wrappers); logs contain only job table entries, no training execution.
+- Real 20-seed bg (task 019eb042-9cf8-7402-add6-6af0918c979c, explicitly launched): progressing at 20/120 after ~4.2 min. Just completed exp d=3 blind cell for the new 20 seeds: valid=8/20 (40%), forms mixed (includes `eml(x,1)` and collapses). CSV at 260 rows (slow trickle; curriculum/warm cells for new seeds not yet reported in volume).
+- Real ln:5 tuning bg (task 019eb042-9f97-7221-94f1-1cbdbaff7b77): 5/30 after ~4.2 min.
+- See live task output via get_command_or_subagent_output for ongoing progress. Full N=20 integration awaits completion of the real runs.
 - Analyzer `analyze_basin_rates.py` (stdlib) + `make_basin_figures.py` (re-run) confirm current rates (254 rows; exp d=3 curriculum still at prior 24 seeds / 50%, ln5 still 0%).
 - Figure re-generated + dropped to `notes/figure3_valid_rates_exp.png` (item 3).
 - Snapshot refreshed: new dated CSV copy in results/v2.3_basin_snapshot/ at launch time + README updated (item 4).
