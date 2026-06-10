@@ -1,0 +1,123 @@
+diff --git a/basin_warmstart.py b/basin_warmstart.py
+index 5f1b220..103b027 100644
+--- a/basin_warmstart.py
++++ b/basin_warmstart.py
+@@ -173,7 +173,14 @@ def main():
+                         # using the best known warm init, then grow its structure into the target depth.
+                         _expected = {'exp': 2, 'ln': 4, 'sqrt': 9}
+                         shallow_depth = _expected.get(func, 2)
+-                        if shallow_depth >= depth:
++                        # For ln at over-representational depth (shallow_depth < depth), a single
++                        # balanced EML gate cannot forward its input unchanged: eml(f, 1) = exp(f) - ln(1) = exp(f).
++                        # Therefore curriculum-ln d>4 reduces to the (now fixed) direct initialize_to_target('ln')
++                        # which plants the correct 3-gate core at the top levels. This avoids embedding the
++                        # wrong function (exp(ln(x)) == x) before training. Grow + block copy + reanneal remain
++                        # available for exp over-depth and for exact-depth cases. See grow_from_shallow docstring
++                        # and the unbalanced-tree note for the real path forward for deeper ln.
++                        if shallow_depth >= depth or func == 'ln':
+                             tree.initialize_to_target(func, noise=args.noise)
+                         else:
+                             shallow = EMLTree(depth=shallow_depth)
+diff --git a/eml_layer_v2.py b/eml_layer_v2.py
+index 43f2a1a..44bcf48 100644
+--- a/eml_layer_v2.py
++++ b/eml_layer_v2.py
+@@ -94,6 +94,12 @@ class InputSelector(nn.Module):
+     def bias_to_symbol(self, sym: str, strength: float = 10.0, noise: float = 0.0):
+         """Strongly bias this selector toward one choice (for warm-start / basin experiments)."""
+         idx = ['1', 'x', 'f'].index(sym)
++        # Guard: bottom-level selectors (num_choices=2, {1,x}) must never receive 'f'.
++        # This protects against (a) copy of symbols from a shallow that resolved 'f' at bottom
++        # (shouldn't happen for valid ln/exp), or (b) accidental 'f' on nc=2 during custom basin work.
++        # Assert surfaces the exact class of bug during smoke / re-runs; remove only if a future
++        # unbalanced embedding legitimately needs to forward at the absolute bottom (unlikely).
++        assert idx < self.num_choices, f"bias_to_symbol('{sym}') invalid for num_choices={self.num_choices} (bottom-level selectors have no 'f' choice)"
+         with torch.no_grad():
+             self.logits.fill_(0.0)
+             self.logits[idx] = strength
+@@ -320,8 +326,21 @@ class EMLTree(nn.Module):
+ 
+         This is the natural next lever after pure symbolic warm-start.
+ 
+-        Note on future tuning (unbalanced-tree support):
+-        The current implementation assumes balanced binary trees. For unbalanced
++        Note on balanced vs unbalanced for ln over-depth:
++        A single EML gate cannot act as an identity forwarder: there is no a,b
++        (from {1,x,f}) such that exp(a) - ln(b) == f for arbitrary f. Therefore
++        eml(f, 1) = exp(f) and eml(1, f) likewise does not preserve the subtree
++        value. Adding one (or more) extra balanced levels on top of a valid d=4
++        ln solution by 'f'-chaining will embed exp(ln(x)) == x (or a similar
++        non-ln function) before any training. 
++
++        For ln curriculum at over-representational depth the driver therefore
++        reduces to the direct (fixed) initialize_to_target('ln') path; the
++        grow + extension is not used. The full-block copy + reanneal remain
++        valuable for exp and for exact-depth cases.
++
++        True deeper ln requires unbalanced / RPN-style sharing (see the note
++        below). The current grow assumes balanced binary trees. For unbalanced
+         (e.g., Odrzywolek's original ln RPN sharing subtrees, which can use fewer
+         levels), extend by parsing shallow.symbolic_form() to identify the exact
+         "active path" selectors to embed, and treat all other parallel branches
+@@ -334,17 +353,19 @@ class EMLTree(nn.Module):
+             self.initialize_to_target('exp' if shallow.depth == 2 else 'ln', noise)
+             return
+ 
+-        # Copy high-level target bias first (ensures top-level correctness)
+-        # Determine func heuristically from depth or by trying both
+-        # (in practice the caller knows; we default to the pattern that worked)
+-        try:
+-            # Prefer the one that gives non-constant top for the shallow
+-            if shallow.depth <= 3:
++        # For exp-style shallow (depth==2), do a high-level top-gate bias first (the proven
++        # direct eml(x,1) at root) before copying the bottom unit. This is harmless and
++        # matches the v2.2 observation that successful deeper exp solutions route x/1 at top.
++        # For ln-style (deeper shallow), skip the heuristic init entirely: the subsequent
++        # full block copy of the valid shallow will provide the correct structure at the
++        # embedded levels. An early initialize_to_target('ln') would plant a top-3 core
++        # that then gets (partially) overwritten by the copy, causing the two embeddings
++        # to fight (one of the issues identified in post-patch review).
++        if shallow.depth == 2:
++            try:
+                 self.initialize_to_target('exp', noise * 0.5)
+-            else:
+-                self.initialize_to_target('ln', noise * 0.5)
+-        except Exception:
+-            self.randomize(noise)
++            except Exception:
++                self.randomize(noise)
+ 
+         # Embed shallow structure
+         if shallow.depth == 2:
+diff --git a/notes/basin_selection_warmstart_note.md b/notes/basin_selection_warmstart_note.md
+index 457e972..7f03d8b 100644
+--- a/notes/basin_selection_warmstart_note.md
++++ b/notes/basin_selection_warmstart_note.md
+@@ -15,7 +15,9 @@ Three-phase temperature annealing solves selector commitment in balanced EML exp
+ 
+ We demonstrate that a simple, targeted warm-start initialization—directly biasing the top-level selectors toward the known-good symbolic form while setting off-path capacity to harmless constants—rescues recovery for exp. In the final 20-seed control run (plus prior batches, 71 seeds cumul for exp d=3), this raises valid-snap rate from 17% to 100% for exp(x) at depth 2 and from ~6–15% to ~92% cumulative (100% in the 20-seed control batch) at depth 3. A new `reanneal_extra_capacity` pass (short targeted re-anneal only on extra selectors after embedding, spine frozen) turns curriculum from 0% to 100% in the 20-seed control batch for exp d=3 (cumulative ~73% for curriculum on d=3). The method requires no change to the training schedule or loss and directly corroborates the paper's analysis of how successful deeper exp solutions operate (routing x/1 at the top).
+ 
+-For ln at d=5 (over-representational), warm and curriculum yielded 0% (66+54 rows) with 100% collapse to `eml(1,eml(1,1))`; blind found 5/66 valids with varied non-trivial forms (see Table 2 + CSV). **Critical data caveat (discovered via CSV+code audit):** the 0% for the "informed" modes was an artifact of the embedding implementation itself (initialize_to_target('ln') and the first-gate-only grow_from_shallow produced a disconnected or constant pretrain form even before training started; the top f pulled sibling constants rather than the core chain). The source now contains the surgical fixes (top-3 core with correct gi routing + full subtree block copy for curriculum + pretrain_form capture + verify_embedding + deterministic seeding). The exp results (warm/curriculum rescue) are unaffected and remain valid. Re-run the ln cells (and ideally a fresh 20-seed) with the corrected driver + eml_layer_v2 before final Zenodo framing of the ln case as boundary vs. "now works". The v2.3 snapshot preserves the diagnostic pre-fix run.
++For ln at d=5 (over-representational), the v2.3 diagnostic data showed 0% for warm (66/66 all `eml(1,eml(1,1))`) and curriculum (54/54 same); blind found 5/66 valids with varied real forms. **Patch status (follow-up to review of the first embedding diff):** `initialize_to_target('ln')` is now fixed — it plants the correct connected form `eml(1,eml(eml(1,x),1))` pre-training for any d>=4 (top-3 right-path core with direct 1/x injection at the core entry level). Warm ln d=4 and d=5 are therefore from a correct start and a re-run will give the real answer (recovery or genuine boundary).
++
++Balanced-tree curriculum for ln at over-depth remains structurally limited even after the full-block copy improvement: a single EML gate cannot forward unchanged (eml(f,1) = exp(f)). The driver now reduces ln over-depth curriculum to the direct (fixed) initialize_to_target path; the grow extension is bypassed for ln. This is documented in the code (basin_warmstart.py curriculum branch + grow_from_shallow docstring) and is itself informative — it shows why the unbalanced/RPN direction noted in the original docstring matters. The v2.3 snapshot + forms for curriculum-ln are pre-fix (and pre-this-followup) diagnostics. Exp results are unaffected. Re-run warm + blind for the ln cells (with the fixed seeding + pretrain_form column) to settle the warm-start question.
+ 
+ **Reproducibility** (exact commands used for the data in this note/snapshot; run after `pip install -r requirements.txt` or equivalent torch/numpy env):
+ 
+@@ -63,12 +65,10 @@ We extend the released `eml_layer_v2.py` with two new capabilities (see `EMLTree
+   - For exp(x) at any depth: the top gate is directly biased to select `x` on one input and constant `1` on the other (exactly the routing observed in the v2.2 paper's valid deeper exp solutions). All other selectors are biased toward constant-`1`.
+   - For ln(x): `initialize_to_target('ln')` now plants the exact target form `eml(1,eml(eml(1,x),1))` at the top 3 levels for *any* d>=4 by placing the core on the right-half path (correct child indices for f) with direct 1/x injection at the core entry lev and const below (see eml_layer_v2.py:241). The curriculum path (`grow_from_shallow`) performs a full left-aligned block copy of *all* gates from the valid shallow (not just gidx=0), preserving width and internal routings, then extends a forwarding f at extra levels; metadata is recorded for reanneal to freeze the embedded region (eml_layer_v2.py:284 and reanneal_extra_capacity). A `verify_embedding()` helper and driver guard + `pretrain_form` CSV column were added to prevent regression of this class of bug.
+ 
+-- `EMLTree.grow_from_shallow(shallow_tree, noise=...)` (curriculum helper, invoked from `basin_warmstart.py:159` after a valid shallow snap at the function's representational depth) + `reanneal_extra_capacity(...)` (next-iteration tuning helper).
+-  - Pre-train a shallow tree at the function's representational depth (`_expected = {'ln':4, ...}` in the driver) using warm initialization, then `train_eml`.
+-  - If valid, call `tree.grow_from_shallow(shallow, ...)`: for ln this copies the first gate of each shallow level onto the deep spine (`self.levels[si][0]`), extends an `'f'` forwarding chain on the first gate of extra upper levels, and forces *all sibling gates* (gidx != 0 on spine levels, and all gates on non-spine positions) to constant-`1` (see ~385-393).
+-  - Immediately after: `tree.reanneal_extra_capacity(epochs=..., lr=...)` (see `basin_warmstart.py:163`). This freezes the "active spine" (first gate `lev[0]` at every level, extreme +20/-20 bias on the embedded symbol) and runs a short L1-to-zero phase-3-style anneal *only on the extra selectors* (gidx != 0). The reanneal uses a dummy zero target on a generic grid to encourage harmless constant subtrees while the spine is locked.
+-  - Then the normal full three-phase `train_eml` is run on the deep tree.
+-  - The implementation includes an explicit note (in the `grow_from_shallow` docstring ~303-310) on future unbalanced-tree support: "parse shallow.symbolic_form() to identify the exact 'active path' selectors to embed, and treat all other parallel branches as extra capacity... This could allow ln at lower effective depth".
++- `EMLTree.grow_from_shallow(shallow_tree, noise=...)` (curriculum helper) + `reanneal_extra_capacity(...)`.
++  - For exp over-depth: pre-train shallow at d=2, grow (full block copy of the shallow unit + top re-assert of x/1), then reanneal extras only (spine frozen). This rescues curriculum from 0% to 100% in tuned batches.
++  - For ln: when the target depth > representational (d>4), the driver now delegates directly to the fixed `initialize_to_target('ln')` (the top-3 right-path core). Balanced extension via 'f' forwarding on an extra level would embed exp(ln(x)) = x (a single EML gate cannot be an identity). The grow full-block copy + reanneal path remains for exp and exact-depth cases. The `grow_from_shallow` docstring documents the structural limit and points to unbalanced support as the path for deeper ln.
++  - `verify_embedding()` and the `pretrain_form` CSV column (added in the first embedding patch + this followup) are the permanent diagnostics.
+ 
+ Noise on the biased logits (0.3–0.5 typical) retains exploration. The only change to the v2.2 protocol is the initialization + optional post-embed reanneal step before the main training loop. All other hyperparameters, data ranges, loss (MAE), optimizer schedule, and the strict post-snap validity definition are identical to the released experiments.
+ 

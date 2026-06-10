@@ -94,6 +94,12 @@ class InputSelector(nn.Module):
     def bias_to_symbol(self, sym: str, strength: float = 10.0, noise: float = 0.0):
         """Strongly bias this selector toward one choice (for warm-start / basin experiments)."""
         idx = ['1', 'x', 'f'].index(sym)
+        # Guard: bottom-level selectors (num_choices=2, {1,x}) must never receive 'f'.
+        # This protects against (a) copy of symbols from a shallow that resolved 'f' at bottom
+        # (shouldn't happen for valid ln/exp), or (b) accidental 'f' on nc=2 during custom basin work.
+        # Assert surfaces the exact class of bug during smoke / re-runs; remove only if a future
+        # unbalanced embedding legitimately needs to forward at the absolute bottom (unlikely).
+        assert idx < self.num_choices, f"bias_to_symbol('{sym}') invalid for num_choices={self.num_choices} (bottom-level selectors have no 'f' choice)"
         with torch.no_grad():
             self.logits.fill_(0.0)
             self.logits[idx] = strength
@@ -320,8 +326,21 @@ class EMLTree(nn.Module):
 
         This is the natural next lever after pure symbolic warm-start.
 
-        Note on future tuning (unbalanced-tree support):
-        The current implementation assumes balanced binary trees. For unbalanced
+        Note on balanced vs unbalanced for ln over-depth:
+        A single EML gate cannot act as an identity forwarder: there is no a,b
+        (from {1,x,f}) such that exp(a) - ln(b) == f for arbitrary f. Therefore
+        eml(f, 1) = exp(f) and eml(1, f) likewise does not preserve the subtree
+        value. Adding one (or more) extra balanced levels on top of a valid d=4
+        ln solution by 'f'-chaining will embed exp(ln(x)) == x (or a similar
+        non-ln function) before any training. 
+
+        For ln curriculum at over-representational depth the driver therefore
+        reduces to the direct (fixed) initialize_to_target('ln') path; the
+        grow + extension is not used. The full-block copy + reanneal remain
+        valuable for exp and for exact-depth cases.
+
+        True deeper ln requires unbalanced / RPN-style sharing (see the note
+        below). The current grow assumes balanced binary trees. For unbalanced
         (e.g., Odrzywolek's original ln RPN sharing subtrees, which can use fewer
         levels), extend by parsing shallow.symbolic_form() to identify the exact
         "active path" selectors to embed, and treat all other parallel branches
@@ -334,17 +353,19 @@ class EMLTree(nn.Module):
             self.initialize_to_target('exp' if shallow.depth == 2 else 'ln', noise)
             return
 
-        # Copy high-level target bias first (ensures top-level correctness)
-        # Determine func heuristically from depth or by trying both
-        # (in practice the caller knows; we default to the pattern that worked)
-        try:
-            # Prefer the one that gives non-constant top for the shallow
-            if shallow.depth <= 3:
+        # For exp-style shallow (depth==2), do a high-level top-gate bias first (the proven
+        # direct eml(x,1) at root) before copying the bottom unit. This is harmless and
+        # matches the v2.2 observation that successful deeper exp solutions route x/1 at top.
+        # For ln-style (deeper shallow), skip the heuristic init entirely: the subsequent
+        # full block copy of the valid shallow will provide the correct structure at the
+        # embedded levels. An early initialize_to_target('ln') would plant a top-3 core
+        # that then gets (partially) overwritten by the copy, causing the two embeddings
+        # to fight (one of the issues identified in post-patch review).
+        if shallow.depth == 2:
+            try:
                 self.initialize_to_target('exp', noise * 0.5)
-            else:
-                self.initialize_to_target('ln', noise * 0.5)
-        except Exception:
-            self.randomize(noise)
+            except Exception:
+                self.randomize(noise)
 
         # Embed shallow structure
         if shallow.depth == 2:
