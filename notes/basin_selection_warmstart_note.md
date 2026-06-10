@@ -94,6 +94,8 @@ Full per-run data for the post-fix claims are in the v2.4_postfix 120-row datase
 - **Figure 2** (optional but strong): Example selector weight trajectories or final max-weight heatmaps for one blind failure vs. one warm success on exp d=2 (shows the basin avoidance visually). A parallel panel contrasting a curriculum+reanneal success (clean `eml(x,1)`) vs. a non-reanneal curriculum failure (core planted but extras not collapsed) would be valuable.
 - **ln d=5 analysis**: Post-fix, warm and curriculum (which reduces to the same direct init) both reach 100% valid (20/20 each in the v2.4 control), so a recovery bar chart for ln would be flat at 100%. The instructive contrast is the `pretrain_form` column: pre-fix (v2.3) every warm/curriculum run started and ended at the trivial `eml(1,eml(1,1))` (the wiring bug), while post-fix every run starts and ends at the correct `eml(1,eml(eml(1,x),1))`. Section 3.1 shows this pre-fix vs post-fix shift.
 
+(Note for camera-ready: the current Figure 1 has a legend overlap on the d=2 warm 100% bar and lacks error bars; regenerate with `python make_basin_figures.py` after any final data updates.)
+
 ![Figure 1: exp(x) valid recovery rates — warm-start and curriculum (reanneal_extra_capacity) vs blind (from make_basin_figures.py on results/basin_warmstart.csv)](notes/figure3_valid_rates_exp.png)
 
 ### 3.1 Pre-fix diagnostic (v2.3) vs post-fix results for ln d=5
@@ -127,12 +129,11 @@ These results provide direct, inexpensive corroboration of two central claims of
 The intervention is deliberately minimal: no schedule changes, no extra loss terms, no architecture modification. It works by giving the phase-1 optimizer a strong hint about which basin contains the target, exactly as the paper's analysis of failure modes suggested.
 
 **Limitations of the current data**
-- The ln d=5 case has 186 runs in the cell (strong statistical consistency on the collapse form); the dedicated 10-seed/400-epoch tuning and the ln portion of the 20-seed control are now completed.
+- The canonical post-fix dataset is the single clean 20-seed control in `results/v2.4_postfix_snapshot/basin_warmstart_v2.4_postfix.csv` (120 rows total). Earlier pre-fix accumulated runs (including the 186-row pre-fix ln d=5 corpus and the 10-seed/400-epoch tuning) are retained only as diagnostic and are not used for the headline numbers.
 - Only exp and ln tested so far; sqrt remains the negative control as in v2.2.
-- The CSV mixes some embedding versions (pre- and post-reanneal for curriculum); the best exp d=3 batches use the final `reanneal_extra_capacity` + `grow_from_shallow`.
-- No loss curves or selector trajectories included yet (can be added from run logs; would be especially informative for the ln d=5 collapse).
+- No loss curves or selector trajectories included yet (can be added from run logs; would be especially informative for the pre-fix ln d=5 collapse, now a diagnostic only).
 
-A full note will incorporate any additional diagnostics (e.g., mpmath high-precision impostor filter suggested in v2.2 limitations for tighter validity, or loss curves / selector-trajectory visualizations for both the exp curriculum win and the ln d=5 collapse). Figures can be regenerated via `python make_basin_figures.py`.
+A full note will incorporate any additional diagnostics (e.g., mpmath high-precision impostor filter suggested in v2.2 limitations for tighter validity, or loss curves / selector-trajectory visualizations for the exp curriculum win and the pre-fix-vs-post-fix ln d=5 shift). Figures can be regenerated via `python make_basin_figures.py`.
 
 ---
 
