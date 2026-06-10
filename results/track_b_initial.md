@@ -135,7 +135,7 @@ See session background task logs for output (or re-run the commands when ready).
 - Tuning flags and unbalanced note added; reanneal_extra_capacity helper in place (spine frozen via extreme bias, Adam on extras only).
 - 12-seed reanneal batch integrated (exp d=3 curriculum 12/12 100% clean `eml(x,1)` in batch / 50% cumul 12/24; warm 88% cumul 45/51).
 - 20-seed control run launched (bg task 019eb042-9cf8-7402-add6-6af0918c979c): `python basin_warmstart.py --seeds 20 --epochs 2000 --noise 0.4 --cells exp:3,ln:5 --reanneal-epochs 200`
-- ln:5 longer-reanneal tuning launched (bg task 019eb042-9f97-7221-94f1-1cbdbaff7b77): `... --seeds 10 --epochs 1500 --cells ln:5 --reanneal-epochs 400`
+- ln:5 longer-reanneal tuning completed (bg task 019eb042-9f97-7221-94f1-1cbdbaff7b77, 1019s): `python basin_warmstart.py --seeds 10 --epochs 1500 --noise 0.4 --cells ln:5 --reanneal-epochs 400`. Result: curriculum 0/10 valid (all `eml(1,eml(1,1))`), warm 0/10, blind 0/10 in this batch. Even 2× reanneal epochs produced no valid snaps for ln d=5. Overall ln curriculum now 0/34 (all 34 to identical `eml(1,eml(1,1))`). This strengthens the boundary case in the note.
 - System notifications received for stub bg tasks (launched with trailing `&`):
   - 019eb03c-dc89-7601-a4a1-7a5bf4a58fea (20-seed cmd): 1.77s, exit 0, no output, 0 effect.
   - 019eb03c-df30-7bd3-867e-38356bdf6aa5 (ln:5 400-epoch cmd): 1.70s, exit 0, no output, 0 effect.
