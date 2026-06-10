@@ -163,32 +163,15 @@ Data and code (including the fixed `initialize_to_target` and `grow_from_shallow
 
 ## Data and Code Availability
 
-All code changes are in the public `eml-ice40-cybenko` repository (see `eml_layer_v2.py`, `basin_warmstart.py`, and `notes/`). The primary new artifact is `results/basin_warmstart.csv`. A versioned "v2.3 basin selection" snapshot (with manifest and the final CSV) is provided alongside this note.
+All code changes are in the public `eml-ice40-cybenko` repository (see `eml_layer_v2.py`, `basin_warmstart.py`, and `notes/`). The canonical artifact for citation is `results/v2.4_postfix_snapshot/basin_warmstart_v2.4_postfix.csv` (120 rows, fixed code, deterministic seeding, pretrain_form column). The pre-fix `results/v2.3_basin_snapshot/` is retained as diagnostic only.
 
-Reproducibility command (example for the reported batches):
+Reproducibility command (the exact one used for the production dataset):
 ```bash
-python basin_warmstart.py --seeds 15 --epochs 1800 --noise 0.4 --cells exp:3,ln:5
-# Curriculum mode is automatically included for over-depth/hard cells.
+python basin_warmstart.py --seeds 20 --epochs 2000 --noise 0.4 --cells ln:5,exp:3 --reanneal-epochs 200 --csv results/basin_warmstart_v2.4_postfix.csv
 ```
 
 ## Target Venue (recommendation for final note)
 
-Short technical note or data+method release (Zenodo + arXiv) or a focused workshop paper (ICML/NeurIPS/ICLR 2026 workshop on Neuro-Symbolic Learning, Reliable ML, or ML for Science). The work is deliberately scoped as a high-signal follow-up. Warm-start initialization now recovers the exact target symbolic form at 100% for every tested cell (exp d=2/3 and ln d=5), including over-representational depth for ln. The remaining structural limit (balanced grow-from-shallow cannot extend ln past representational depth because no single EML gate is an identity forwarder) is identified and motivates unbalanced trees. The combination (full recovery + honest identification of the one remaining mechanical limit + full post-fix data release with pretrain_form diagnostic) makes a clean, citable artifact.
+Short technical note or data+method release (Zenodo + arXiv) or a focused workshop paper (ICML/NeurIPS/ICLR 2026 workshop on Neuro-Symbolic Learning, Reliable ML, or ML for Science). The work is deliberately scoped as a high-signal follow-up. Warm-start recovers every tested cell, including exp at d=2/d=3 and ln at over-representational d=5, at 100% in the 20-seed control, from blind baselines of 17-35%. The one documented structural limit (balanced curriculum grow-extension for ln) is narrow and method-internal, and it motivates a concrete next step (unbalanced trees). The combination makes a clean positive-result-plus-reproducible-artifacts-plus-one-scoped-open-problem package. The earlier v2.3 collapse is retained transparently as the diagnostic that drove the code fixes.
 
 ---
-
-## Data and Code Availability (reproducibility)
-
-All code changes are in the public `eml-ice40-cybenko` repository on branch `feature/track-b-basin-warmstart-curriculum` (see `eml_layer_v2.py`, `basin_warmstart.py`, `notes/basin_selection_warmstart_note.md`, and `results/patches/` for the two diffs). The canonical post-fix artifact is the v2.4 120-row dataset (`results/v2.4_postfix_snapshot/basin_warmstart_v2.4_postfix.csv` with pretrain_form column). The v2.3 snapshot is the pre-fix diagnostic only.
-
-Reproducibility (exact command that produced the data in this note):
-```bash
-python basin_warmstart.py --seeds 20 --epochs 2000 --noise 0.4 --cells ln:5,exp:3 --reanneal-epochs 200 --csv results/basin_warmstart_v2.4_postfix.csv
-```
-(See the note's Reproducibility section and `results/v2.4_postfix_snapshot/README.md` for the full summary and the 3-seed validation command used during development.)
-
-See `results/v2.3_basin_snapshot/README.md` and the parent manifest for the dataset description, key results, and limitations. The 20-seed control run has completed; final data are in the CSV and snapshot.
-
----
-
-*End of note*
