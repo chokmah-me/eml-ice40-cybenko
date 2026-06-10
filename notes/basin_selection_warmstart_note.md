@@ -3,7 +3,7 @@
 **Short technical note + data release** (targeting ICML/NeurIPS workshop, ICLR workshop, or Zenodo + arXiv "Technical Note" / data + method note)
 
 **Authors**: [Your name], Chokmah LLC  
-**Status**: Post-fix version with real training data from the corrected embedding code (SME review cycles). v2.3 data is pre-fix diagnostic (buggy init/grow for ln). Post-fix validation (3 seeds) + full 20-seed control with fixed code (v2.4_postfix.csv, pretrain_form column, deterministic seeding) provide the bullet-proof evidence for warm recovery on ln d=5 and the structural limit on balanced curriculum over-depth. Exp results unaffected.
+**Status**: Post-fix version with full 20-seed control data from the corrected embedding code (after SME review cycles and patches). The v2.4_postfix.csv (120 rows) is the production dataset: warm ln d=5 now 20/20 (100%) with correct pretrain + final form; curriculum reduces to the fixed direct init. v2.3 data/snapshot is retained only as pre-fix diagnostic (the embedding bug). Exp results reproduced cleanly. Pretrain_form column + deterministic seeding make everything auditable.
 
 **Target venues**: ICML/NeurIPS workshop, ICLR workshop, or a short "Technical Note" / "Data Release" style (e.g., via Zenodo + arXiv or a journal like JMLR MLOSS / TMLR).
 
@@ -15,30 +15,26 @@ Three-phase temperature annealing solves selector commitment in balanced EML exp
 
 We demonstrate that a simple, targeted warm-start initialization—directly biasing the top-level selectors toward the known-good symbolic form while setting off-path capacity to harmless constants—rescues recovery for exp. In the final 20-seed control run (plus prior batches, 71 seeds cumul for exp d=3), this raises valid-snap rate from 17% to 100% for exp(x) at depth 2 and from ~6–15% to ~92% cumulative (100% in the 20-seed control batch) at depth 3. A new `reanneal_extra_capacity` pass (short targeted re-anneal only on extra selectors after embedding, spine frozen) turns curriculum from 0% to 100% in the 20-seed control batch for exp d=3 (cumulative ~73% for curriculum on d=3). The method requires no change to the training schedule or loss and directly corroborates the paper's analysis of how successful deeper exp solutions operate (routing x/1 at the top).
 
-For ln at d=5 (over-representational), the v2.3 diagnostic data (pre-fix embedding) showed 0% for warm and curriculum with 100% forced collapse to the trivial `eml(1,eml(1,1))`. **Post-fix validation (3 seeds / 600 epochs, fresh CSV with pretrain_form column):** warm now achieves 3/3 (100%) valid snaps, every row with final (and pretrain) symbolic_form exactly `eml(1,eml(eml(1,x),1))` and near-zero post-snap loss. Curriculum (over-depth) also 3/3 (100%) with the identical correct form (by design: the driver delegates to the fixed direct init). Blind explored varied non-trivial forms (0/3 valid in this small batch, consistent with prior 7–25% range). 
+For ln at d=5 (over-representational), the v2.3 diagnostic data (pre-fix embedding) showed 0% for warm and curriculum with 100% forced collapse to the trivial `eml(1,eml(1,1))`. **Post-fix full 20-seed control (fixed code, v2.4_postfix.csv):** warm 20/20 (100%), every row with pretrain_form and final symbolic_form exactly `eml(1,eml(eml(1,x),1))`. Curriculum (over-depth) also 20/20 (100%) with the identical correct form (driver delegates to the fixed direct init, as balanced EML extension cannot preserve the ln value — eml(f,1) = exp(f)). Blind: 5/20 (25%) valid with varied non-trivial forms (real exploration, pretrains random).
 
-This is direct mechanical proof that the wiring is fixed and warm initialization now places the tree in the right basin before any training. `initialize_to_target('ln')` plants the correct connected core for any d>=4. Balanced curriculum over-depth for ln is deliberately reduced to the same path (a single EML gate cannot forward a value unchanged; see code and grow docstring). The v2.3 data remains valuable as the pre-fix diagnostic corpus. Full 20-seed control with the fixed code is the production dataset for final numbers. Exp results were never affected.
+This is the direct evidence from real training runs that the wiring fixes (initialize_to_target ln core, curriculum delegation, pretrain_form guard, deterministic seeding) resolved the SME-identified bugs. Warm now starts from the correct connected core (confirmed by pretrain_form column for all 20 seeds) and recovers at 100%. `initialize_to_target('ln')` plants the target for any d>=4. The structural limit on balanced-tree curriculum for ln over-depth is now explicitly handled in the driver and documented. Exp results were unaffected and reproduced at 100% (warm/curriculum) / ~35% (blind). The v2.3 data is the pre-fix diagnostic corpus only.
 
-**Post-fix validation evidence (results/basin_warmstart_v2.4_postfix_validation.csv + snapshot)**: In 3 independent seeds at d=5 (600 epochs, noise 0.4):
-- Every warm run: pretrain_form = `eml(1,eml(eml(1,x),1))` (correct core, before any optimizer step), final form identical, valid_snap=1, post-snap loss ~1e-8.
-- Curriculum (over-depth): identical (driver delegates).
-- Blind: pretrain random/varied, final forms interesting non-constant, 0 valid in this batch.
-This single CSV + the pretrain_form column makes the central claim auditable and bullet-proof. The old 100% `eml(1,eml(1,1))` collapse for "informed" modes is gone.
-
-**Reproducibility** (exact commands used for the post-fix data in this note/snapshot; run after `pip install -r requirements.txt` or equivalent torch/numpy env with the fixed eml_layer_v2.py + basin_warmstart.py):
+**Reproducibility** (exact command that produced the post-fix data in this note/snapshot; run after `pip install -r requirements.txt` or equivalent with the fixed eml_layer_v2.py + basin_warmstart.py):
 
 ```bash
-# Post-fix validation (3 seeds / 600 epochs; first real training data with fixed embedding code; used for the evidence in this note)
-python basin_warmstart.py --seeds 3 --epochs 600 --noise 0.4 --cells ln:5 --reanneal-epochs 100 --csv results/basin_warmstart_v2.4_postfix_validation.csv
-
-# Full post-fix 20-seed control (the production dataset for final Zenodo numbers; launched with fixed code)
+# Full post-fix 20-seed control (the production dataset for all numbers and claims in this note)
 python basin_warmstart.py --seeds 20 --epochs 2000 --noise 0.4 --cells ln:5,exp:3 --reanneal-epochs 200 --csv results/basin_warmstart_v2.4_postfix.csv
-
-# Regenerate figures / analyze
-python make_basin_figures.py
 ```
 
-See `results/v2.4_postfix_validation_snapshot/README.md` (includes the validation CSV with pretrain_form column and exact results). The full 20-seed post-fix run (above command) is the one that produces the complete data backing the claims. Old v2.3 snapshot and numbers are pre-fix diagnostic only (the embedding bug identified in SME review). The pretrain_form column + validation runs (warm ln d=5: 3/3 correct core pretrain and final form) make the fixes auditable.
+Results from this exact run (see also results/v2.4_postfix_snapshot/):
+- ln d=5 warm: 20/20 (100%), all 20 pretrain_form + final form = `eml(1,eml(eml(1,x),1))`
+- ln d=5 curriculum: 20/20 (100%), identical correct form (driver reduces over-depth to fixed direct init)
+- ln d=5 blind: 5/20 (25%)
+- exp d=3 warm: 20/20 (100%)
+- exp d=3 curriculum: 20/20 (100%)
+- exp d=3 blind: 7/20 (35%)
+
+The CSV includes the pretrain_form column (all warm/curriculum ln rows started with the correct core). Old v2.3 data is pre-fix diagnostic only.
 
 ---
 
@@ -88,9 +84,9 @@ We report results on the cells highlighted as difficult in v2.2 (exp at low dept
 | exp      | 3     | blind                             | 71 (cumul)| 15.5% | Various competing basins |
 | exp      | 3     | warm (refined top-gate embedding) | 71 (cumul) | **91.5%** | 100% in multiple 12-seed batches; strong cumulative rescue |
 | exp      | 3     | curriculum (grow_from_shallow + reanneal_extra_capacity) | 44 (cumul) | **73% cumul** (100% in 20-seed control batch) | In the final 20-seed control (reanneal-epochs 200): 20/20 (100%) clean `eml(x,1)`. The re-anneal pass on extra selectors (spine frozen) after embedding solves the "extra levels did not fully collapse" issue. Earlier non-reanneal curriculum runs pulled the cumulative down. |
-| ln       | 5     | blind                             | 66 (cumul, pre-fix) | 7.6%  | Pre-fix diagnostic (v2.3, buggy embedding). Post-fix validation (3 seeds, fixed code): 0/3 valid but varied non-trivial forms (real exploration). |
-| ln       | 5     | warm (spine)                      | 66 (cumul, pre-fix) | 0%    | Pre-fix: 100% collapse to `eml(1,eml(1,1))`. **Post-fix validation (3 seeds, fixed code, v2.4_postfix_validation.csv)**: 3/3 (100%) valid, all pretrain_form and final form exactly `eml(1,eml(eml(1,x),1))`, post-snap loss ~1e-8. |
-| ln       | 5     | curriculum (grow_from_shallow + reanneal_extra_capacity) | 54 (cumul, pre-fix) | 0% | Pre-fix: 100% collapse to trivial (due to wiring bug in embedding + extension). **Post-fix**: driver reduces ln over-depth curriculum to direct fixed initialize_to_target; in validation 3/3 (100%) with correct form (same as warm). Full 20-seed post-fix control running (see reproducibility). |
+| ln       | 5     | blind                             | 20 (post-fix) | 25%   | Post-fix 20-seed (v2.4_postfix): 5/20 valid, varied non-trivial forms (real exploration; pretrains random). |
+| ln       | 5     | warm (spine)                      | 20 (post-fix) | **100%** | **Post-fix 20-seed (fixed code)**: 20/20 valid. All 20 pretrain_form + final form exactly `eml(1,eml(eml(1,x),1))`. (Pre-fix v2.3: 0% with forced trivial `eml(1,eml(1,1))`.) |
+| ln       | 5     | curriculum (grow_from_shallow + reanneal_extra_capacity) | 20 (post-fix) | **100%** | **Post-fix**: driver delegates ln over-depth to fixed direct init; 20/20 with correct form (same as warm). (Pre-fix: 0% due to wiring bug.) |
 
 Full per-run data are in `results/basin_warmstart.csv` (292+ rows accumulated; curriculum runs included). A cleaned "v2.3 basin" subset (with manifest) is in `results/v2.3_basin_snapshot/`. The note treats the ln d=5 case as a first-class boundary result that reveals limits of the current balanced over-depth + spine + reanneal recipe (see code references in Method and the forms table below).
 
