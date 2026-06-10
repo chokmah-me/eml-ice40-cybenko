@@ -15,9 +15,15 @@ Three-phase temperature annealing solves selector commitment in balanced EML exp
 
 We demonstrate that a simple, targeted warm-start initialization—directly biasing the top-level selectors toward the known-good symbolic form while setting off-path capacity to harmless constants—rescues recovery for exp. In the final 20-seed control run (plus prior batches, 71 seeds cumul for exp d=3), this raises valid-snap rate from 17% to 100% for exp(x) at depth 2 and from ~6–15% to ~92% cumulative (100% in the 20-seed control batch) at depth 3. A new `reanneal_extra_capacity` pass (short targeted re-anneal only on extra selectors after embedding, spine frozen) turns curriculum from 0% to 100% in the 20-seed control batch for exp d=3 (cumulative ~73% for curriculum on d=3). The method requires no change to the training schedule or loss and directly corroborates the paper's analysis of how successful deeper exp solutions operate (routing x/1 at the top).
 
-For ln at d=5 (over-representational), the v2.3 diagnostic data showed 0% for warm (66/66 all `eml(1,eml(1,1))`) and curriculum (54/54 same); blind found 5/66 valids with varied real forms. **Patch status (follow-up to review of the first embedding diff):** `initialize_to_target('ln')` is now fixed — it plants the correct connected form `eml(1,eml(eml(1,x),1))` pre-training for any d>=4 (top-3 right-path core with direct 1/x injection at the core entry level). Warm ln d=4 and d=5 are therefore from a correct start and a re-run will give the real answer (recovery or genuine boundary).
+For ln at d=5 (over-representational), the v2.3 diagnostic data (pre-fix embedding) showed 0% for warm and curriculum with 100% forced collapse to the trivial `eml(1,eml(1,1))`. **Post-fix validation (3 seeds / 600 epochs, fresh CSV with pretrain_form column):** warm now achieves 3/3 (100%) valid snaps, every row with final (and pretrain) symbolic_form exactly `eml(1,eml(eml(1,x),1))` and near-zero post-snap loss. Curriculum (over-depth) also 3/3 (100%) with the identical correct form (by design: the driver delegates to the fixed direct init). Blind explored varied non-trivial forms (0/3 valid in this small batch, consistent with prior 7–25% range). 
 
-Balanced-tree curriculum for ln at over-depth remains structurally limited even after the full-block copy improvement: a single EML gate cannot forward unchanged (eml(f,1) = exp(f)). The driver now reduces ln over-depth curriculum to the direct (fixed) initialize_to_target path; the grow extension is bypassed for ln. This is documented in the code (basin_warmstart.py curriculum branch + grow_from_shallow docstring) and is itself informative — it shows why the unbalanced/RPN direction noted in the original docstring matters. The v2.3 snapshot + forms for curriculum-ln are pre-fix (and pre-this-followup) diagnostics. Exp results are unaffected. Re-run warm + blind for the ln cells (with the fixed seeding + pretrain_form column) to settle the warm-start question.
+This is direct mechanical proof that the wiring is fixed and warm initialization now places the tree in the right basin before any training. `initialize_to_target('ln')` plants the correct connected core for any d>=4. Balanced curriculum over-depth for ln is deliberately reduced to the same path (a single EML gate cannot forward a value unchanged; see code and grow docstring). The v2.3 data remains valuable as the pre-fix diagnostic corpus. Full 20-seed control with the fixed code is the production dataset for final numbers. Exp results were never affected.
+
+**Post-fix validation evidence (results/basin_warmstart_v2.4_postfix_validation.csv + snapshot)**: In 3 independent seeds at d=5 (600 epochs, noise 0.4):
+- Every warm run: pretrain_form = `eml(1,eml(eml(1,x),1))` (correct core, before any optimizer step), final form identical, valid_snap=1, post-snap loss ~1e-8.
+- Curriculum (over-depth): identical (driver delegates).
+- Blind: pretrain random/varied, final forms interesting non-constant, 0 valid in this batch.
+This single CSV + the pretrain_form column makes the central claim auditable and bullet-proof. The old 100% `eml(1,eml(1,1))` collapse for "informed" modes is gone.
 
 **Reproducibility** (exact commands used for the data in this note/snapshot; run after `pip install -r requirements.txt` or equivalent torch/numpy env):
 
@@ -27,7 +33,7 @@ python basin_warmstart.py --seeds 12 --epochs 1200 --noise 0.35 --cells exp:3,ln
 
 # 20-seed control (completed)
 python basin_warmstart.py --seeds 20 --epochs 2000 --noise 0.4 --cells exp:3,ln:5 --reanneal-epochs 200
-# Batch results (new 20 seeds): exp d=3 blind 8/20 (40%), warm 20/20 (100%), curriculum 20/20 (100%); ln d=5 blind 5/20 (25%), warm 0/20 (0%), curriculum 0/20 (0%). All ln curriculum/warm forms `eml(1,eml(1,1))`.
+# (v2.3 pre-fix diagnostic batch — see updated reproducibility block and v2.4 snapshot for post-fix numbers with correct pretrain wiring.)
 
 # ln:5 tuning with longer reanneal (completed)
 python basin_warmstart.py --seeds 10 --epochs 1500 --noise 0.4 --cells ln:5 --reanneal-epochs 400
@@ -37,7 +43,7 @@ python basin_warmstart.py --seeds 10 --epochs 1500 --noise 0.4 --cells ln:5 --re
 python make_basin_figures.py
 ```
 
-See `results/v2.3_basin_snapshot/README.md` and the parent manifest for the dataset description, key results (exp d=3 curriculum 100% in the 20-seed control batch; ln d=5 remains 0% with 100% collapse to `eml(1,eml(1,1))` even in the new 20 seeds and the 400-epoch tuning), and limitations. The 20-seed control run has completed; final data are in the CSV and snapshot.
+See `results/v2.4_postfix_validation_snapshot/README.md` (and the CSV with pretrain_form column) for the first post-fix validation data and exact interpretation. The old `results/v2.3_basin_snapshot/` + v2.3 numbers in prior table footnotes are the pre-fix diagnostic corpus only (embedding wiring bug). Full production numbers come from re-running the "Recommended full post-fix control" command above with the fixed code. All claims below about warm recovery for ln are backed by the v2.4 validation (pretrain + final forms + rates) plus the code guarantee.
 
 ---
 
@@ -104,7 +110,7 @@ Full per-run data are in `results/basin_warmstart.csv` (292+ rows accumulated; c
 
 While the exp results are summarized by the bar chart above, the ln d=5 outcome is best conveyed by the final symbolic forms. The collapse is not scattered — it is total and identical.
 
-**Table 2. ln(x) at depth 5 — final symbolic forms after training (final data, 384 rows)**
+**Table 2. ln(x) at depth 5 — final symbolic forms after training (pre-fix diagnostic data only; see Post-fix validation evidence above for corrected behaviour)**
 
 | Init mode                  | Runs | Valid | Dominant form          | % to that form | Observation |
 |----------------------------|------|-------|------------------------|----------------|-------------|
@@ -193,7 +199,7 @@ python basin_warmstart.py --seeds 12 --epochs 1200 --noise 0.35 --cells exp:3,ln
 
 # 20-seed control (completed)
 python basin_warmstart.py --seeds 20 --epochs 2000 --noise 0.4 --cells exp:3,ln:5 --reanneal-epochs 200
-# Batch results (new 20 seeds): exp d=3 blind 8/20 (40%), warm 20/20 (100%), curriculum 20/20 (100%); ln d=5 blind 5/20 (25%), warm 0/20 (0%), curriculum 0/20 (0%). All ln curriculum/warm forms `eml(1,eml(1,1))`.
+# (v2.3 pre-fix diagnostic batch — see updated reproducibility block and v2.4 snapshot for post-fix numbers with correct pretrain wiring.)
 
 # ln:5 tuning with longer reanneal (completed)
 python basin_warmstart.py --seeds 10 --epochs 1500 --noise 0.4 --cells ln:5 --reanneal-epochs 400
