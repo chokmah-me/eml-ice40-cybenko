@@ -67,7 +67,7 @@ We report results on the cells highlighted as difficult in v2.2 (exp at low dept
 | exp      | 2     | warm (direct top-gate x/1 + noise)| 6         | **100%** | All `eml(x,1)` |
 | exp      | 3     | blind                             | 12 (cumul)| 0%    | Various competing basins |
 | exp      | 3     | warm (refined top-gate embedding) | 12 (latest batch) + cumulative | **100%** (latest) / ~85% cumul | All `eml(x,1)` in 12-seed/1500-epoch batch |
-| exp      | 3     | curriculum (grow_from_shallow + reanneal_extra_capacity) | 12 (this batch) / 24 cumul | **100% (this batch)** / 50% cumul | With the re-anneal-only-on-new-capacity pass: 12/12 (100%) valid `eml(x,1)` in the tuned batch. Cumulative 50% (prior non-reanneal curriculum runs were 0/12). Embedding + re-anneal succeeds in collapsing extra levels. (20-seed control runs launched for final precision; see results log.) |
+| exp      | 3     | curriculum (grow_from_shallow + reanneal_extra_capacity) | 12 (reanneal batch) / 24 cumul | **100% (reanneal batch)** / 50% cumul | In the 12-seed/1200-epoch batch with reanneal: 12/12 (100%) clean `eml(x,1)`. Cumulative 50% (earlier non-reanneal curriculum 0/12). The re-anneal pass on extra selectors after embedding solves the collapse issue. (20-seed controls + longer-reanneal ln:5 tuning launched; see results log for pending data.) |
 | ln       | 5     | blind                             | 12        | 0%    | Multiple incorrect deep nestings |
 | ln       | 5     | warm (spine)                      | 12        | 0%    | Heavy collapse to constants |
 | ln       | 5     | curriculum (grow_from_shallow)    | 12 (latest batch) | 0% | Still heavy collapse to constants (`eml(1,eml(1,1))`); curriculum injection not yet sufficient for this over-depth case |

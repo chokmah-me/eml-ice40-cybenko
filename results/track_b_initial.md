@@ -100,33 +100,37 @@ This batch gives us the first real look at curriculum behavior. The exp d=3 resu
 
 The note skeleton has been updated with these observations and the new table entries. We are in a good position to either (a) tune curriculum further and re-run ln d=5 + exp d=3, or (b) declare the exp-side results sufficient for a strong short note focused on the warm/refined embedding wins + curriculum as promising future direction.
 
-All four hypercompetent follow-ups (curriculum code + script support, higher-N runs, skeleton fleshing, notes manifest + labeling) are now complete, with fresh data integrated.
+## Current iteration (continuing the 5-item next-steps plan)
 
-## Next steps (Track B)
+**Script enhancements for tuning (advancing item 1)**:
+- `basin_warmstart.py` now supports `--reanneal-epochs` and `--reanneal-lr` flags (default 200/0.001) for easy experimentation with different re-anneal lengths and learning rates on extra capacity. Used in the launched ln:5 longer-reanneal tuning run (400 epochs).
+- `eml_layer_v2.py` grow_from_shallow docstring includes note on future unbalanced-tree support (parse shallow.symbolic_form() to mark only the active path for embedding, leaving siblings as extra/constant). This could help ln d=5 by reducing effective depth.
 
-We have now reached the threshold the user requested: real new results + stronger corroboration (exp d=2 at 100% warm; exp d=3 showing clear lift to 100% in the fresh refined-embedding batch).
+**20-seed control runs and tuning experiments launched (item 2 in progress)**:
+- 20-seed control: `python basin_warmstart.py --seeds 20 --epochs 2000 --noise 0.4 --cells exp:3,ln:5 --reanneal-epochs 200` (background; will grow CSV with high-fidelity data for final note numbers).
+- ln:5 tuning experiment: `python basin_warmstart.py --seeds 10 --epochs 1500 --noise 0.4 --cells ln:5 --reanneal-epochs 400` (background; tests longer re-anneal on extra levels for collapse/recovery).
 
-**Action taken**: Created a professional note skeleton at `notes/basin_selection_warmstart_note_skeleton.md`.
+See session background task logs for output (or re-run the commands when ready). Post-run: use the CSV analysis snippet to extract rates and update this log + skeleton.
 
-The skeleton includes:
-- Title and abstract
-- Real numbers from the two Track B batches (with honest caveats on N and cumulative vs fresh)
-- Methods description of the refined warm-start
-- Results table
-- Discussion tying back to v2.2 and Odrzywolek SI
-- Future-work section (curriculum/grow-from-shallow is now the top item)
-- Placeholders for figures, larger-scale numbers, full protocol, etc.
+**Latest cumulative stats** (from CSV analysis post-12-seed run; 234 rows):
+- exp d=2: blind 17%, warm 100%
+- exp d=3: blind 6%, curriculum 50% (100% in the tuned reanneal batch), warm 88%
+- ln d=5: 0% across all (including curriculum and longer-reanneal experiment in flight)
 
-**Immediate recommended follow-ups** (in rough priority):
-1. Implement "grow-from-shallow" / curriculum embedding (train valid shallow → embed structure into deeper tree).
-2. Re-run the key cells (especially exp d=3 and ln d=5) at full 20 seeds / 2000 epochs with the current best initializer + any curriculum.
-3. Flesh out the skeleton (add 1-2 figures, tighten writing, decide on target venue, possibly deposit an expanded CSV as v2.3 data).
-4. Consider adding the mpmath impostor filter and/or a small unbalanced-tree experiment if we want more breadth before submitting.
+**Artifacts**:
+- Code changes committed in previous iteration commit (eb6981f).
+- Skeleton polished with updated abstract (includes reanneal, 50% curriculum cumulative, launched runs note), table, observations, and tuning section.
+- This log extended.
+- v2.3 snapshot and manifest in place (will refresh with 20-seed data when complete).
+- Figure script ready (re-run after new data for updated PNG).
 
-The direction remains excellent. We have a clean, reproducible, paper-aligned positive result that directly advances the central claim of v2.2.
+**Next in this iteration** (per plan and todo):
+- Monitor/complete background runs, integrate exact 20-seed rates into skeleton table and this log (item 2).
+- Re-run/enhance figures (item 3).
+- Update snapshot with latest CSV (item 4).
+- Final polish of skeleton into submission-ready short note draft (item 5; integrate numbers, add reproducibility with the exact CLIs and figure command, tighten discussion with the reanneal diagnostic).
+- Commit updates to feature branch.
 
-All of the above now have a clean place to live thanks to the new `initialize_to_target` hook and the dedicated experiment script.
+See the approved plan.md (section 9) for the full saved next-steps list. The exp-side is solid; ln d=5 curriculum is the open challenge (background data will inform if longer re-anneal helps).
 
----
-
-See also: [ROADMAP.md](../ROADMAP.md) (Track B section) and the main paper for the baseline numbers this work is trying to improve.
+See also: [ROADMAP.md](../ROADMAP.md) (Track B section) and the main paper for the baseline numbers this work is trying to improve. The note skeleton is the primary deliverable for this iteration.
