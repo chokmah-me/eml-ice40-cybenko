@@ -19,6 +19,24 @@ These results provide strong corroboration that basin selection, rather than rep
 
 A "v2.3 basin" data snapshot and reproducibility scripts accompany this note.
 
+**Reproducibility** (exact commands used for the data in this note/snapshot; run after `pip install -r requirements.txt` or equivalent torch/numpy env):
+
+```bash
+# Representative higher-N + reanneal batch (12 seeds/1200 epochs)
+python basin_warmstart.py --seeds 12 --epochs 1200 --noise 0.35 --cells exp:3,ln:5 --reanneal-epochs 200
+
+# 20-seed control (launched; use for final numbers)
+python basin_warmstart.py --seeds 20 --epochs 2000 --noise 0.4 --cells exp:3,ln:5 --reanneal-epochs 200
+
+# ln:5 tuning with longer reanneal (launched)
+python basin_warmstart.py --seeds 10 --epochs 1500 --noise 0.4 --cells ln:5 --reanneal-epochs 400
+
+# Regenerate figures from current CSV
+python make_basin_figures.py
+```
+
+See `results/v2.3_basin_snapshot/README.md` and the parent manifest for the dataset description, key results (exp d=3 curriculum 100% in reanneal batch), and limitations. The live `results/basin_warmstart.csv` will grow with the 20-seed data.
+
 ---
 
 ## 1. Introduction
@@ -96,15 +114,16 @@ These results provide direct, inexpensive corroboration of two central claims of
 The intervention is deliberately minimal: no schedule changes, no extra loss terms, no architecture modification. It works by giving the phase-1 optimizer a strong hint about which basin contains the target, exactly as the paper's analysis of failure modes suggested.
 
 **Limitations of the current data (skeleton)**
-- Small seed counts (6–12 per cell) and reduced epochs in the "quick" batches.
-- Only two functions tested so far; the ln d=5 case remains unsolved by simple embedding.
-- The CSV mixes two slightly different embedding versions for exp d=3.
+- Seed counts per cell are 6–15 in the reported batches (12-seed/1200-epoch reanneal batch and prior; 20-seed controls launched in background for final precision before submission).
+- Only exp and ln tested so far; sqrt remains the negative control as in v2.2.
+- The CSV mixes embedding versions (pre- and post-reanneal for curriculum); the tuned batches use the final `reanneal_extra_capacity` + grow_from_shallow.
+- No loss curves or selector trajectories included yet (can be added from run logs).
 
-A full note would re-run the key cells at the paper's original 20 seeds / 2000 epochs (see `python basin_warmstart.py --seeds 20 --epochs 2000 ...`), add the mpmath high-precision filter suggested in v2.2 limitations, and include loss curves or selector-trajectory visualizations.
+A full note would incorporate the 20-seed control data (see launched commands above), add the mpmath high-precision impostor filter suggested in v2.2 limitations for tighter validity, and include loss curves or selector-trajectory visualizations for the key exp d=3 curriculum win.
 
 Figures can be regenerated with:
   python make_basin_figures.py
-(after ensuring results/basin_warmstart.csv contains the desired batches).
+(after the 20-seed data lands in results/basin_warmstart.csv).
 
 ---
 

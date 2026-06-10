@@ -125,11 +125,11 @@ See session background task logs for output (or re-run the commands when ready).
 - Figure script ready (re-run after new data for updated PNG).
 
 **Next in this iteration** (per plan and todo):
-- Monitor/complete background runs, integrate exact 20-seed rates into skeleton table and this log (item 2).
-- Re-run/enhance figures (item 3).
-- Update snapshot with latest CSV (item 4).
-- Final polish of skeleton into submission-ready short note draft (item 5; integrate numbers, add reproducibility with the exact CLIs and figure command, tighten discussion with the reanneal diagnostic).
-- Commit updates to feature branch.
+- Monitor/complete the launched background runs (20-seed control for exp:3/ln:5 with reanneal; ln:5 longer-reanneal 400-epoch tuning), integrate exact rates into skeleton table and this log when complete (item 2).
+- Re-run/enhance figures with the 20-seed data (item 3; figure3 already re-generated with 12-seed stats).
+- Refresh snapshot with latest CSV (item 4; dated copy + README in results/v2.3_basin_snapshot/).
+- Final polish of skeleton into submission-ready short note draft (item 5; integrate 20-seed numbers, add full reproducibility section with the exact CLIs and figure command, tighten discussion with the reanneal diagnostic as the key tuning win).
+- Commit updates to feature branch (follows the e60c541 iteration commit).
 
 See the approved plan.md (section 9) for the full saved next-steps list. The exp-side is solid; ln d=5 curriculum is the open challenge (background data will inform if longer re-anneal helps).
 
