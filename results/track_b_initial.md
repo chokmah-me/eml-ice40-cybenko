@@ -131,17 +131,19 @@ See session background task logs for output (or re-run the commands when ready).
 - Final polish of skeleton into submission-ready short note draft (item 5; integrate 20-seed numbers, add full reproducibility section with the exact CLIs and figure command, tighten discussion with the reanneal diagnostic as the key tuning win).
 - Commit updates to feature branch (follows the 7708325 iteration commit).
 
-**Current state of iteration (as of this continue)**:
-- Tuning flags and unbalanced note added; reanneal helper in place.
-- 12-seed reanneal batch integrated (exp d=3 curriculum 100% in batch / 50% cumul).
-- 20-seed and ln:5 tuning runs launched in background.
-- Figure re-generated.
-- Snapshot refreshed.
-- Skeleton and this log updated with reproducibility, stats, and next steps.
-- Committed (e60c541, 7708325).
+**Current state of iteration (this continue session)**:
+- Tuning flags and unbalanced note added; reanneal_extra_capacity helper in place (spine frozen via extreme bias, Adam on extras only).
+- 12-seed reanneal batch integrated (exp d=3 curriculum 12/12 100% clean `eml(x,1)` in batch / 50% cumul 12/24; warm 88% cumul 45/51).
+- 20-seed control run launched (bg task 019eb042-9cf8-7402-add6-6af0918c979c): `python basin_warmstart.py --seeds 20 --epochs 2000 --noise 0.4 --cells exp:3,ln:5 --reanneal-epochs 200`
+- ln:5 longer-reanneal tuning launched (bg task 019eb042-9f97-7221-94f1-1cbdbaff7b77): `... --seeds 10 --epochs 1500 --cells ln:5 --reanneal-epochs 400`
+- Analyzer `analyze_basin_rates.py` (stdlib) + `make_basin_figures.py` confirm current 234-row rates (see above).
+- Figure re-generated + dropped to `notes/figure3_valid_rates_exp.png` (item 3).
+- Snapshot refreshed: new dated CSV copy in results/v2.3_basin_snapshot/ at launch time + README updated (item 4).
+- `plan.md` created with verbatim 5-item list + execution status (Section "Saved next-steps").
+- Skeleton polished (Table 1 with precise 51/24 N, abstract, observations, limitations, figure embed, reproducibility) (item 5).
+- track log + top README changelog + snapshot README updated.
+- Ready to integrate 20-seed rates (re-run analyzer/figures, update table/abstract/log/snapshot) once bg completes and CSV grows. Commits to follow on feature branch.
 
-See plan.md section 9 for the saved 5-item next-steps list. The exp-side (warm + curriculum + reanneal) is solid at current scales; ln d=5 remains 0% (background data will inform). Ready for integration when runs complete.
+See `plan.md` (saved 5-item next-steps verbatim) and todos. The exp-side (warm + curriculum + reanneal) is solid at current scales with clear diagnostic ("reanneal solved collapse"); ln d=5 remains 0% (bg + future unbalanced will inform). CSV will grow live from the bg runs; use `python analyze_basin_rates.py` post-run for integration numbers.
 
-See the approved plan.md (section 9) for the full saved next-steps list. The exp-side is solid; ln d=5 curriculum is the open challenge (background data will inform if longer re-anneal helps).
-
-See also: [ROADMAP.md](../ROADMAP.md) (Track B section) and the main paper for the baseline numbers this work is trying to improve. The note skeleton is the primary deliverable for this iteration.
+See also: [ROADMAP.md](../ROADMAP.md) (Track B section) and the main paper for the baseline numbers this work is trying to improve. The note skeleton + plan.md + v2.3 snapshot are the primary deliverables for this iteration.
