@@ -131,26 +131,15 @@ See session background task logs for output (or re-run the commands when ready).
 - Final polish of skeleton into submission-ready short note draft (item 5; integrate 20-seed numbers, add full reproducibility section with the exact CLIs and figure command, tighten discussion with the reanneal diagnostic as the key tuning win).
 - Commit updates to feature branch (follows the 7708325 iteration commit).
 
-**Current state of iteration (this continue session)**:
-- Tuning flags and unbalanced note added; reanneal_extra_capacity helper in place (spine frozen via extreme bias, Adam on extras only).
-- 12-seed reanneal batch integrated (exp d=3 curriculum 12/12 100% clean `eml(x,1)` in batch / 50% cumul 12/24; warm 88% cumul 45/51).
-- 20-seed control run launched (bg task 019eb042-9cf8-7402-add6-6af0918c979c): `python basin_warmstart.py --seeds 20 --epochs 2000 --noise 0.4 --cells exp:3,ln:5 --reanneal-epochs 200`
-- ln:5 longer-reanneal tuning completed (bg task 019eb042-9f97-7221-94f1-1cbdbaff7b77, 1019s): `python basin_warmstart.py --seeds 10 --epochs 1500 --noise 0.4 --cells ln:5 --reanneal-epochs 400`. Result: curriculum 0/10 valid (all `eml(1,eml(1,1))`), warm 0/10, blind 0/10 in this batch. Even 2× reanneal epochs produced no valid snaps for ln d=5. Overall ln curriculum now 0/34 (all 34 to identical `eml(1,eml(1,1))`). This strengthens the boundary case in the note.
-- System notifications received for stub bg tasks (launched with trailing `&`):
-  - 019eb03c-dc89-7601-a4a1-7a5bf4a58fea (20-seed cmd): 1.77s, exit 0, no output, 0 effect.
-  - 019eb03c-df30-7bd3-867e-38356bdf6aa5 (ln:5 400-epoch cmd): 1.70s, exit 0, no output, 0 effect.
-  These are shell backgrounding artifacts (PSJob wrappers); logs contain only job table entries, no training execution.
-- Real 20-seed bg (task 019eb042-9cf8-7402-add6-6af0918c979c, explicitly launched): progressing at 20/120 after ~4.2 min. Just completed exp d=3 blind cell for the new 20 seeds: valid=8/20 (40%), forms mixed (includes `eml(x,1)` and collapses). CSV at 260 rows (slow trickle; curriculum/warm cells for new seeds not yet reported in volume).
-- Real ln:5 tuning bg (task 019eb042-9f97-7221-94f1-1cbdbaff7b77): 5/30 after ~4.2 min.
-- See live task output via get_command_or_subagent_output for ongoing progress. Full N=20 integration awaits completion of the real runs.
-- Analyzer `analyze_basin_rates.py` (stdlib) + `make_basin_figures.py` (re-run) confirm current rates (254 rows; exp d=3 curriculum still at prior 24 seeds / 50%, ln5 still 0%).
-- Figure re-generated + dropped to `notes/figure3_valid_rates_exp.png` (item 3).
-- Snapshot refreshed: new dated CSV copy in results/v2.3_basin_snapshot/ at launch time + README updated (item 4).
-- `plan.md` created with verbatim 5-item list + execution status (Section "Saved next-steps").
-- Skeleton polished (Table 1 with precise 51/24 N, abstract, observations, limitations, figure embed, reproducibility) (item 5).
-- track log + top README changelog + snapshot README updated.
-- Ready to integrate 20-seed rates (re-run analyzer/figures, update table/abstract/log/snapshot) once the real bg completes and CSV grows substantially. Commits to follow on feature branch.
+**Final state (both major runs completed)**:
+- 20-seed control completed (bg task 019eb042-9cf8-7402-add6-6af0918c979c, 2507s, exit 0): `python basin_warmstart.py --seeds 20 --epochs 2000 --noise 0.4 --cells exp:3,ln:5 --reanneal-epochs 200`
+  - New 20-seed batch: exp d=3 blind 8/20 (40% valid), warm 20/20 (100% `eml(x,1)`), curriculum 20/20 (100% `eml(x,1)`); ln d=5 blind 5/20 (25%), warm 0/20 (all `eml(1,eml(1,1))`), curriculum 0/20 (all `eml(1,eml(1,1))`).
+  - Final summary table from run (cumul for touched cells): exp3 blind 15%, warm 92%, curriculum 73%; ln5 blind 8%, warm 0%, curriculum 0%.
+- ln:5 400-epoch tuning completed earlier (0/10 curriculum valid in batch, all `eml(1,eml(1,1))`).
+- Overall post both runs (384 rows): ln d=5 curriculum 0/54 (54/54 `eml(1,eml(1,1))`), warm 0/66; exp d=3 curriculum ~73% cumul (32/44, with the 20-seed batch contributing 20 clean ones).
+- All 5 iteration items complete: tuning pass done (reanneal + 400-epoch test), 20-seed control landed, figures refreshed, final v2.3 snapshot cut (dated CSV + README), note polished (ln d=5 as first-class boundary with code refs + forms Table 2, final numbers integrated, "in progress" language removed).
+- Stub notifications (1.7s no-ops) ignored.
 
-See `plan.md` (saved 5-item next-steps verbatim) and todos. The exp-side (warm + curriculum + reanneal) is solid at current scales with clear diagnostic ("reanneal solved collapse" — 0% → 100% in tuned batch). The ln d=5 case is now treated as a first-class boundary result in the note (117 rows, 0% valid, 100% collapse to exactly `eml(1,eml(1,1))` even with spine embedding + reanneal). This is scientifically valuable: it shows the limit of the current recipe and motivates unbalanced trees / function-aware tuning. CSV will grow live from the bg runs (real tasks, not the 1.7s stubs); use `python analyze_basin_rates.py` post-run for final integration numbers. The note revision (this session) elevates ln d=5 to equal status per user request.
+See `plan.md` and the note for the delivered artifacts. The exp side (warm + curriculum + reanneal) delivered the expected wins (100% in the 20-seed batch for exp d=3 curriculum); ln d=5 remains the clear boundary (0% across 54 curriculum rows + the 400-epoch variant, 100% identical collapse despite spine embedding). Ready for Zenodo data+note release or workshop submission.
 
-See also: [ROADMAP.md](../ROADMAP.md) (Track B section) and the main paper for the baseline numbers this work is trying to improve. The note skeleton + plan.md + v2.3 snapshot are the primary deliverables for this iteration.
+See also: [ROADMAP.md](../ROADMAP.md) (Track B section). The note + final snapshot + plan.md are the primary deliverables.
