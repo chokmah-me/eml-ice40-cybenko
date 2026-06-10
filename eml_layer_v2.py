@@ -299,6 +299,15 @@ class EMLTree(nn.Module):
         - All new capacity gets light noise + constant bias.
 
         This is the natural next lever after pure symbolic warm-start.
+
+        Note on future tuning (unbalanced-tree support):
+        The current implementation assumes balanced binary trees. For unbalanced
+        (e.g., Odrzywolek's original ln RPN sharing subtrees, which can use fewer
+        levels), extend by parsing shallow.symbolic_form() to identify the exact
+        "active path" selectors to embed, and treat all other parallel branches
+        as extra capacity for constant bias. This could allow ln at lower effective
+        depth and improve d=5 recovery. See prior_versions/dev/ for historical
+        plans on unbalanced vs balanced.
         """
         if self.depth <= shallow.depth:
             # No growth needed

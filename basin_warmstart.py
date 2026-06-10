@@ -77,6 +77,9 @@ def main():
                         help='Comma list of func:depth to test, e.g. exp:2,ln:5')
     parser.add_argument('--csv', type=str, default='results/basin_warmstart.csv')
     parser.add_argument('--quick', action='store_true', help='Force small seeds/epochs for fast demo')
+    # Curriculum tuning flags (for next iteration experiments on noise schedules / re-anneal)
+    parser.add_argument('--reanneal-epochs', type=int, default=200, help='Epochs for reanneal_extra_capacity in curriculum mode')
+    parser.add_argument('--reanneal-lr', type=float, default=0.001, help='LR for reanneal_extra_capacity in curriculum mode')
     args = parser.parse_args()
 
     if args.quick:
@@ -156,7 +159,10 @@ def main():
                                 tree.grow_from_shallow(shallow, noise=args.noise * 0.7)
                                 # Next-iteration tuning: re-anneal only the extra capacity after embedding.
                                 # This is the "re-anneal-only-on-new-capacity" pass.
-                                tree.reanneal_extra_capacity(epochs=200, lr=0.001, verbose=False)
+                                # Configurable via --reanneal-epochs etc for experimenting with schedules.
+                                tree.reanneal_extra_capacity(epochs=getattr(args, 'reanneal_epochs', 200),
+                                                             lr=getattr(args, 'reanneal_lr', 0.001),
+                                                             verbose=False)
                             else:
                                 # Fallback to best direct warm
                                 tree.initialize_to_target(func, noise=args.noise)

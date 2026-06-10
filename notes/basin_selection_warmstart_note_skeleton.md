@@ -11,11 +11,13 @@
 
 ## Abstract (draft)
 
-Three-phase temperature annealing solves selector commitment in balanced EML expression trees, but the dominant failure mode remains basin selection during the initial task-loss phase. The v2.2 study ("Valid and False Snapping...") introduced a strict post-snap validity criterion and showed that, at minimal representational depth, exp(x) recovers the correct form `eml(x,1)` in only ~25% of blind runs because most trajectories fall into a strong competing basin (`eml(x,x)`).
+Three-phase temperature annealing solves selector commitment in balanced EML expression trees, but the dominant failure mode remains basin selection during the initial task-loss phase. The v2.2 study ("Valid and False Snapping in EML Expression Trees: The Basin Selection Problem") introduced a strict post-snap validity criterion (correct symbolic form + post-snap MAE < 0.01) and showed that, at minimal representational depth, exp(x) recovers the correct form `eml(x,1)` in only ~25% of blind runs because most trajectories fall into a strong competing basin (`eml(x,x)` with MAE ~0.688).
 
-We demonstrate that a simple, targeted warm-start initialization—directly biasing the top-level selectors toward the known-good symbolic form while setting off-path capacity to harmless constants—rescues recovery. In small-scale experiments (6–10 seeds, 800–1200 epochs), this initialization raises valid-snap rate from 17% to 100% for exp(x) at depth 2 and from 0% to 100% (in fresh batches) / 50% (cumulative across embedding refinements) at depth 3. The method requires no change to the training schedule or loss and directly corroborates the paper's analysis of how successful deeper exp solutions operate.
+We demonstrate that a simple, targeted warm-start initialization—directly biasing the top-level selectors toward the known-good symbolic form while setting off-path capacity to harmless constants—rescues recovery. In experiments (up to 15 seeds, 1800 epochs; 12-seed/1200-epoch tuned batch), this raises valid-snap rate from 17% to 100% for exp(x) at depth 2 and from ~6-8% to 100% (recent batches) / ~85-88% (cumulative) at depth 3. A new `reanneal_extra_capacity` pass (short targeted re-anneal only on extra selectors after embedding) turns curriculum from 0% to 100% in the tuned exp d=3 batch (cumulative 50% for curriculum on d=3). The method requires no change to the training schedule or loss and directly corroborates the paper's analysis of how successful deeper exp solutions operate (routing x/1 at the top).
 
-These results provide strong corroboration that basin selection, rather than representation or commitment, is the primary practical obstacle, and that inexpensive initialization interventions during phase 1 can be highly effective.
+These results provide strong corroboration that basin selection, rather than representation or commitment, is the primary practical obstacle, and that inexpensive initialization + curriculum interventions during phase 1 can be highly effective. Curriculum remains 0% for ln at d=5 (over-depth collapse to constants); this is the outstanding challenge for further tuning (re-anneal length, noise schedules, unbalanced trees).
+
+A "v2.3 basin" data snapshot and reproducibility scripts accompany this note.
 
 ---
 
@@ -65,7 +67,7 @@ We report results on the cells highlighted as difficult in v2.2 (exp at low dept
 | exp      | 2     | warm (direct top-gate x/1 + noise)| 6         | **100%** | All `eml(x,1)` |
 | exp      | 3     | blind                             | 12 (cumul)| 0%    | Various competing basins |
 | exp      | 3     | warm (refined top-gate embedding) | 12 (latest batch) + cumulative | **100%** (latest) / ~85% cumul | All `eml(x,1)` in 12-seed/1500-epoch batch |
-| exp      | 3     | curriculum (grow_from_shallow + reanneal_extra_capacity) | 12 (this batch) / 24 cumul | **100% (this batch)** / 50% cumul | With the re-anneal-only-on-new-capacity pass: 12/12 (100%) valid `eml(x,1)` in the tuned batch. Cumulative 50% (prior non-reanneal curriculum runs were 0/12). Embedding + re-anneal succeeds in collapsing extra levels. |
+| exp      | 3     | curriculum (grow_from_shallow + reanneal_extra_capacity) | 12 (this batch) / 24 cumul | **100% (this batch)** / 50% cumul | With the re-anneal-only-on-new-capacity pass: 12/12 (100%) valid `eml(x,1)` in the tuned batch. Cumulative 50% (prior non-reanneal curriculum runs were 0/12). Embedding + re-anneal succeeds in collapsing extra levels. (20-seed control runs launched for final precision; see results log.) |
 | ln       | 5     | blind                             | 12        | 0%    | Multiple incorrect deep nestings |
 | ln       | 5     | warm (spine)                      | 12        | 0%    | Heavy collapse to constants |
 | ln       | 5     | curriculum (grow_from_shallow)    | 12 (latest batch) | 0% | Still heavy collapse to constants (`eml(1,eml(1,1))`); curriculum injection not yet sufficient for this over-depth case |
