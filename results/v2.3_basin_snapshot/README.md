@@ -18,7 +18,7 @@ This directory contains the data snapshot for the Track B short note iteration (
 - ln d=5 (first-class boundary case, now with full 20-seed + 400-epoch data): 0% for warm (66/66) and curriculum (54/54); blind ~7.6% (5/66, a few sporadic). *Every* curriculum and warm run collapses to the identical form `eml(1,eml(1,1))`. The 20-seed control (reanneal 200) gave ln curriculum 0/20 and warm 0/20, all same form. The 400-epoch tuning also 0/10 curriculum. The note treats this as an equal partner: spine embedding succeeds (see code), yet the constant attractor dominates for ln at d=5.
 
 **Reproducibility (documented in the note and manifest)**:
-See `notes/basin_selection_warmstart_note_skeleton.md`, `results/track_b_initial.md`, and the parent `results/basin_warmstart_v2.3_manifest.md` (or the live CSV header comments) for the exact commands used (including the 20-seed control and 400-epoch ln tuning).
+See `notes/basin_selection_warmstart_note.md`, `results/track_b_initial.md`, and the parent `results/basin_warmstart_v2.3_manifest.md` (or the live CSV header comments) for the exact commands used (including the 20-seed control and 400-epoch ln tuning).
 
 **Final snapshot note**: This is the post-20-seed control snapshot (copied after the main control run completed). Both the 20-seed control and the ln:5 400-epoch tuning are now done. The main note has been updated with the final batch + cumulative numbers (exp curriculum 100% in the 20-seed batch for the new seeds; ln d=5 0% with 100% identical collapse across 54 curriculum rows). Re-run `python make_basin_figures.py` and `python analyze_basin_rates.py` for figures/rates from the final CSV.
 

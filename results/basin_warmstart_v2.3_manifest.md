@@ -47,4 +47,4 @@ python make_basin_figures.py
 - Only exp and ln tested so far.
 - Curriculum for ln d=5 and extra-level collapse on exp over-depth still need work.
 
-See `notes/basin_selection_warmstart_note_skeleton.md` for the current draft that consumes this data, and `results/track_b_initial.md` for the full experimental log and diagnostic details.
+See `notes/basin_selection_warmstart_note.md` for the current draft that consumes this data, and `results/track_b_initial.md` for the full experimental log and diagnostic details.

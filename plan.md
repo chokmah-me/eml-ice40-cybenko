@@ -2,7 +2,7 @@
 
 This plan captures the focused iteration for the short technical note / data release on v2.2 basin selection improvements (warm-start init + curriculum/grow_from_shallow + reanneal_extra_capacity).
 
-See `results/track_b_initial.md` for full experimental log and `notes/basin_selection_warmstart_note_skeleton.md` for the primary deliverable draft.
+See `results/track_b_initial.md` for full experimental log and `notes/basin_selection_warmstart_note.md` for the primary deliverable draft.
 
 ## Status (as of latest continue)
 - Core implementation complete: `initialize_to_target`, `grow_from_shallow`, `reanneal_extra_capacity` (spine frozen, extra selectors only, phase-3 style short anneal) in eml_layer_v2.py.

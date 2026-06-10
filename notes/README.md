@@ -4,7 +4,7 @@ This directory contains working documents, skeletons, and artifacts from the pos
 
 ## Contents
 
-- `basin_selection_warmstart_note_skeleton.md` — Professional skeleton for a short technical note / workshop paper. Includes real results from the first two batches of experiments (exp d=2 at 100% warm, exp d=3 lift after refined embedding, curriculum runs in progress for ln d=5). Ready to be filled with larger-N numbers, figures, and tightened writing.
+- `basin_selection_warmstart_note.md` — Professional skeleton for a short technical note / workshop paper. Includes real results from the first two batches of experiments (exp d=2 at 100% warm, exp d=3 lift after refined embedding, curriculum runs in progress for ln d=5). Ready to be filled with larger-N numbers, figures, and tightened writing.
 
 - (Future) `basin_warmstart_v2.3_manifest.md` or similar — when we cut a cleaned data release.
 
