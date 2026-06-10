@@ -127,9 +127,20 @@ See session background task logs for output (or re-run the commands when ready).
 **Next in this iteration** (per plan and todo):
 - Monitor/complete the launched background runs (20-seed control for exp:3/ln:5 with reanneal; ln:5 longer-reanneal 400-epoch tuning), integrate exact rates into skeleton table and this log when complete (item 2).
 - Re-run/enhance figures with the 20-seed data (item 3; figure3 already re-generated with 12-seed stats).
-- Refresh snapshot with latest CSV (item 4; dated copy + README in results/v2.3_basin_snapshot/).
+- Refresh snapshot with latest CSV (item 4; dated copy + README in results/v2.3_basin_snapshot/ -- refreshed with 234 rows).
 - Final polish of skeleton into submission-ready short note draft (item 5; integrate 20-seed numbers, add full reproducibility section with the exact CLIs and figure command, tighten discussion with the reanneal diagnostic as the key tuning win).
-- Commit updates to feature branch (follows the e60c541 iteration commit).
+- Commit updates to feature branch (follows the 7708325 iteration commit).
+
+**Current state of iteration (as of this continue)**:
+- Tuning flags and unbalanced note added; reanneal helper in place.
+- 12-seed reanneal batch integrated (exp d=3 curriculum 100% in batch / 50% cumul).
+- 20-seed and ln:5 tuning runs launched in background.
+- Figure re-generated.
+- Snapshot refreshed.
+- Skeleton and this log updated with reproducibility, stats, and next steps.
+- Committed (e60c541, 7708325).
+
+See plan.md section 9 for the saved 5-item next-steps list. The exp-side (warm + curriculum + reanneal) is solid at current scales; ln d=5 remains 0% (background data will inform). Ready for integration when runs complete.
 
 See the approved plan.md (section 9) for the full saved next-steps list. The exp-side is solid; ln d=5 curriculum is the open challenge (background data will inform if longer re-anneal helps).
 

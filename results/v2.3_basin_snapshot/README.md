@@ -2,7 +2,7 @@
 
 This directory contains the data snapshot for the Track B short note iteration (post curriculum re-anneal tuning pass).
 
-**Snapshot date**: 2026-06-10 (iteration after feature branch + first 4 hypercompetent follow-ups)
+**Snapshot date**: 2026-06-10 (refreshed post 12-seed/1200-epoch reanneal batch + analysis; 234 rows in source CSV. 20-seed controls + ln:5 longer-reanneal (400 epochs) tuning runs launched in background for final data.)
 
 **Source (live at time of snapshot)**: ../basin_warmstart.csv (162 rows accumulated across all Track B batches, including the 12-seed/1500-epoch + curriculum batch and the representative tuned-curriculum run).
 
