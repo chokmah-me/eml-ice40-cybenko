@@ -1,7 +1,7 @@
 # Track B Initial Progress – Basin Selection Warm-Starts
 
 **Date**: 2026-04 (session after v2.2 roadmap)
-**Status**: Implementation + launch complete; comparative runs in progress.
+**Status**: All runs completed; final numbers and snapshot delivered.
 
 ## What was added
 
@@ -98,37 +98,37 @@ Cumulative picture (from the full `basin_warmstart.csv` after this run):
 
 This batch gives us the first real look at curriculum behavior. The exp d=3 result shows that `grow_from_shallow` does what it is supposed to (plants the shallow solution), but the deeper tree's extra levels still need either more training time, a second short annealing phase on the new selectors only, or refinements to how the embedding biases the "ignore" branches.
 
-The note skeleton has been updated with these observations and the new table entries. We are in a good position to either (a) tune curriculum further and re-run ln d=5 + exp d=3, or (b) declare the exp-side results sufficient for a strong short note focused on the warm/refined embedding wins + curriculum as promising future direction.
+The note has been updated with the final observations and tables. The exp-side results (warm + reanneal curriculum delivering 100% in the 20-seed batch) are strong; ln d=5 remains the clear boundary case (0/54 curriculum, 100% `eml(1,eml(1,1))`).
 
 ## Current iteration (continuing the 5-item next-steps plan)
 
 **Script enhancements for tuning (advancing item 1)**:
-- `basin_warmstart.py` now supports `--reanneal-epochs` and `--reanneal-lr` flags (default 200/0.001) for easy experimentation with different re-anneal lengths and learning rates on extra capacity. Used in the launched ln:5 longer-reanneal tuning run (400 epochs).
+- `basin_warmstart.py` now supports `--reanneal-epochs` and `--reanneal-lr` flags (default 200/0.001) for easy experimentation with different re-anneal lengths and learning rates on extra capacity. Used in the ln:5 400-epoch tuning run (completed).
 - `eml_layer_v2.py` grow_from_shallow docstring includes note on future unbalanced-tree support (parse shallow.symbolic_form() to mark only the active path for embedding, leaving siblings as extra/constant). This could help ln d=5 by reducing effective depth.
 
-**20-seed control runs and tuning experiments launched (item 2 in progress)**:
+**20-seed control and tuning experiments (completed)**:
 - 20-seed control: `python basin_warmstart.py --seeds 20 --epochs 2000 --noise 0.4 --cells exp:3,ln:5 --reanneal-epochs 200` (background; will grow CSV with high-fidelity data for final note numbers).
 - ln:5 tuning experiment: `python basin_warmstart.py --seeds 10 --epochs 1500 --noise 0.4 --cells ln:5 --reanneal-epochs 400` (background; tests longer re-anneal on extra levels for collapse/recovery).
 
-See session background task logs for output (or re-run the commands when ready). Post-run: use the CSV analysis snippet to extract rates and update this log + skeleton.
+See session background task logs for output. Post-run rates extracted via `analyze_basin_rates.py` and integrated into the note + this log.
 
 **Latest cumulative stats** (from CSV analysis post-12-seed run; 234 rows):
 - exp d=2: blind 17%, warm 100%
 - exp d=3: blind 6%, curriculum 50% (100% in the tuned reanneal batch), warm 88%
-- ln d=5: 0% across all (including curriculum and longer-reanneal experiment in flight)
+- ln d=5: 0% across all (curriculum 0/54 total after 20-seed control + 400-epoch tuning; 100% collapse to `eml(1,eml(1,1))`).
 
 **Artifacts**:
 - Code changes committed in previous iteration commit (eb6981f).
-- Skeleton polished with updated abstract (includes reanneal, 50% curriculum cumulative, launched runs note), table, observations, and tuning section.
+- Note polished with final numbers (see note for 20-seed batch + cumulative rates, ln forms Table 2, code references).
 - This log extended.
 - v2.3 snapshot and manifest in place (will refresh with 20-seed data when complete).
 - Figure script ready (re-run after new data for updated PNG).
 
 **Next in this iteration** (per plan and todo):
-- Monitor/complete the launched background runs (20-seed control for exp:3/ln:5 with reanneal; ln:5 longer-reanneal 400-epoch tuning), integrate exact rates into skeleton table and this log when complete (item 2).
+- 20-seed control and 400-epoch ln tuning completed; rates integrated into note Table 1/2 + this log.
 - Re-run/enhance figures with the 20-seed data (item 3; figure3 already re-generated with 12-seed stats).
 - Refresh snapshot with latest CSV (item 4; dated copy + README in results/v2.3_basin_snapshot/ -- refreshed with 234 rows).
-- Final polish of skeleton into submission-ready short note draft (item 5; integrate 20-seed numbers, add full reproducibility section with the exact CLIs and figure command, tighten discussion with the reanneal diagnostic as the key tuning win).
+- Note finalized with 20-seed numbers, reproducibility (exact CLIs + batch results), and discussion (reanneal diagnostic + ln boundary).
 - Commit updates to feature branch (follows the 7708325 iteration commit).
 
 **Final state (both major runs completed)**:
