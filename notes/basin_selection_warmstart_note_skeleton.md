@@ -1,17 +1,15 @@
-# Basin Selection in EML Expression Trees: Targeted Warm-Start Initialization Achieves Full Valid Recovery at Low Depths
+# Basin Selection in EML Expression Trees: Targeted Warm-Start Initialization Achieves Full Valid Recovery for exp but Exposes Limits for ln at Over-Representational Depth
 
-**Basin Selection in EML Expression Trees: Targeted Warm-Start Initialization Achieves Full Valid Recovery for exp but Exposes Limits for ln at Over-Representational Depth**
-
-**Working title / short technical note + data release** (targeting ICML/NeurIPS workshop, ICLR workshop, or Zenodo + arXiv "Technical Note" / data + method note)
+**Short technical note + data release** (targeting ICML/NeurIPS workshop, ICLR workshop, or Zenodo + arXiv "Technical Note" / data + method note)
 
 **Authors**: [Your name], Chokmah LLC  
-**Status**: Mature draft with substantial data (exp side strong; ln d=5 boundary results included as first-class case, now including the completed 10-seed/400-epoch reanneal tuning run). 20-seed control (incl. ln:5) still in progress for final precision.
+**Status**: Final version with completed 20-seed control data (exp side strong positive results; ln d=5 treated as first-class boundary case with 400-epoch tuning and full 20-seed results).
 
 **Target venues**: ICML/NeurIPS workshop, ICLR workshop, or a short "Technical Note" / "Data Release" style (e.g., via Zenodo + arXiv or a journal like JMLR MLOSS / TMLR).
 
 ---
 
-## Abstract (draft)
+## Abstract
 
 Three-phase temperature annealing solves selector commitment in balanced EML expression trees, but the dominant failure mode remains basin selection during the initial task-loss phase. The v2.2 study ("Valid and False Snapping in EML Expression Trees: The Basin Selection Problem") introduced a strict post-snap validity criterion (correct symbolic form + post-snap MAE < 0.01) and showed that, at minimal representational depth, exp(x) recovers the correct form `eml(x,1)` in only ~25% of blind runs because most trajectories fall into a strong competing basin (`eml(x,x)` with MAE ~0.688).
 
@@ -74,8 +72,6 @@ We extend the released `eml_layer_v2.py` with two new capabilities (see `EMLTree
 
 Noise on the biased logits (0.3–0.5 typical) retains exploration. The only change to the v2.2 protocol is the initialization + optional post-embed reanneal step before the main training loop. All other hyperparameters, data ranges, loss (MAE), optimizer schedule, and the strict post-snap validity definition are identical to the released experiments.
 
-Noise on the biased logits (0.3–0.5 typical) retains exploration. The only change to the v2.2 protocol is the initialization step before phase 1. All other hyperparameters, data ranges, loss (MAE), optimizer schedule, and the strict post-snap validity definition are identical to the released experiments.
-
 ---
 
 ## 3. Results
@@ -91,8 +87,8 @@ We report results on the cells highlighted as difficult in v2.2 (exp at low dept
 | exp      | 3     | blind                             | 71 (cumul)| 15.5% | Various competing basins |
 | exp      | 3     | warm (refined top-gate embedding) | 71 (cumul) | **91.5%** | 100% in multiple 12-seed batches; strong cumulative rescue |
 | exp      | 3     | curriculum (grow_from_shallow + reanneal_extra_capacity) | 44 (cumul) | **73% cumul** (100% in 20-seed control batch) | In the final 20-seed control (reanneal-epochs 200): 20/20 (100%) clean `eml(x,1)`. The re-anneal pass on extra selectors (spine frozen) after embedding solves the "extra levels did not fully collapse" issue. Earlier non-reanneal curriculum runs pulled the cumulative down. |
-| ln       | 5     | blind                             | 46 (cumul)| 0%    | Consistent collapse (multiple deep nestings) |
-| ln       | 5     | warm (spine)                      | 46 (cumul)| 0%    | Heavy collapse to constants; dominant form `eml(1,eml(1,1))` |
+| ln       | 5     | blind                             | 66 (cumul)| 7.6%  | Consistent collapse (a few sporadic valids; 25% in the 20-seed control batch) |
+| ln       | 5     | warm (spine)                      | 66 (cumul)| 0%    | Heavy collapse to constants; dominant form `eml(1,eml(1,1))` (0/20 in 20-seed batch) |
 | ln       | 5     | curriculum (grow_from_shallow + reanneal_extra_capacity) | 54 (cumul) | 0% | *Every* run (54/54) collapses to the identical trivial form `eml(1,eml(1,1))`. The spine embedding is performed (see `grow_from_shallow` for the 'f'-chain construction + reanneal spine freeze), yet the optimizer still selects the strong constant attractor. A dedicated 10-seed / 400-epoch longer-reanneal tuning run (completed) gave 0/10; the 20-seed control (completed) also gave 0/20 for ln curriculum, all `eml(1,eml(1,1))`. |
 
 Full per-run data are in `results/basin_warmstart.csv` (292+ rows accumulated; curriculum runs included). A cleaned "v2.3 basin" subset (with manifest) is in `results/v2.3_basin_snapshot/`. The note treats the ln d=5 case as a first-class boundary result that reveals limits of the current balanced over-depth + spine + reanneal recipe (see code references in Method and the forms table below).
@@ -108,12 +104,12 @@ Full per-run data are in `results/basin_warmstart.csv` (292+ rows accumulated; c
 
 While the exp results are summarized by the bar chart above, the ln d=5 outcome is best conveyed by the final symbolic forms. The collapse is not scattered — it is total and identical.
 
-**Table 2. ln(x) at depth 5 — final symbolic forms after training (current data)**
+**Table 2. ln(x) at depth 5 — final symbolic forms after training (final data, 384 rows)**
 
 | Init mode                  | Runs | Valid | Dominant form          | % to that form | Observation |
 |----------------------------|------|-------|------------------------|----------------|-------------|
-| blind (randomize 0.1)      | 52   | 0     | varied (e.g. `eml(1,eml(1,x))`, `eml(1,eml(eml(eml(x,1),x),x))`, ...) | — (multiple basins) | Multiple incorrect deep nestings, as reported in v2.2. |
-| warm (spine init)          | 46   | 0     | `eml(1,eml(1,1))`      | 100%           | Direct 'f'-spine bias (from `initialize_to_target('ln')`) is still completely overwhelmed by the constant attractor. |
+| blind (randomize 0.1)      | 66   | 5     | varied (e.g. `eml(1,eml(1,x))`, `eml(1,eml(eml(1,x),x))`, `eml(1,eml(eml(eml(x,1),x),x))`, ...) | — (multiple basins) | Multiple incorrect deep nestings, as reported in v2.2 (5/20 valids appeared in the 20-seed control batch). |
+| warm (spine init)          | 66   | 0     | `eml(1,eml(1,1))`      | 100%           | Direct 'f'-spine bias (from `initialize_to_target('ln')`) is still completely overwhelmed by the constant attractor (0/20 in 20-seed batch). |
 | curriculum (grow_from_shallow + reanneal_extra_capacity) | 54 | 0 | `eml(1,eml(1,1))` | 100% | Includes the completed 10-seed/400-epoch reanneal tuning batch (all 10 also `eml(1,eml(1,1))`) and the ln curriculum portion of the 20-seed control (another 20, all `eml(1,eml(1,1))`). The curriculum path (`basin_warmstart.py:152-165`) pre-trains at depth 4, calls `grow_from_shallow` (eml_layer_v2.py:370: copies shallow first gates to spine + extends 'f' chain + forces siblings to '1'), then `reanneal_extra_capacity` (freezes `lev[0]` spine with extreme bias, L1-sharpens only extras on dummy zero target). The embedded spine is present at the start of main training, yet every final snapped tree (54/54) is the identical trivial constant. Even 2× reanneal epochs + the full 20-seed control produced no change for ln. |
 
 This table uses the live `results/basin_warmstart.csv` (forms column from `tree.symbolic_form()` after snap). The 100% identical collapse under curriculum is the key diagnostic for future work on unbalanced trees (see the explicit note in `grow_from_shallow` docstring).
@@ -135,20 +131,16 @@ These results provide direct, inexpensive corroboration of two central claims of
 The intervention is deliberately minimal: no schedule changes, no extra loss terms, no architecture modification. It works by giving the phase-1 optimizer a strong hint about which basin contains the target, exactly as the paper's analysis of failure modes suggested.
 
 **Limitations of the current data**
-- Seed counts are still accumulating toward the target 20 seeds per (func, depth, mode) cell. The ln d=5 case currently has 117 rows (strong statistical consistency on the collapse form) but the dedicated 10-seed/400-epoch tuning and the ln portion of the 20-seed control are still in progress.
+- The ln d=5 case has 186 runs in the cell (strong statistical consistency on the collapse form); the dedicated 10-seed/400-epoch tuning and the ln portion of the 20-seed control are now completed.
 - Only exp and ln tested so far; sqrt remains the negative control as in v2.2.
 - The CSV mixes some embedding versions (pre- and post-reanneal for curriculum); the best exp d=3 batches use the final `reanneal_extra_capacity` + `grow_from_shallow`.
 - No loss curves or selector trajectories included yet (can be added from run logs; would be especially informative for the ln d=5 collapse).
 
-A full note will incorporate the completed 20-seed control data and the ln:5 longer-reanneal results (see commands in reproducibility section + `results/track_b_initial.md`), add the mpmath high-precision impostor filter suggested in v2.2 limitations for tighter validity, and include loss curves or selector-trajectory visualizations for both the exp curriculum win and the ln d=5 collapse. Figures can be regenerated via `python make_basin_figures.py`.
-
-Figures can be regenerated with:
-  python make_basin_figures.py
-(after the 20-seed data lands in results/basin_warmstart.csv).
+A full note will incorporate any additional diagnostics (e.g., mpmath high-precision impostor filter suggested in v2.2 limitations for tighter validity, or loss curves / selector-trajectory visualizations for both the exp curriculum win and the ln d=5 collapse). Figures can be regenerated via `python make_basin_figures.py`.
 
 ---
 
-## 5. Future Work (outlined in skeleton)
+## 5. Future Work
 
 - **Curriculum / grow-from-shallow + reanneal for over-depth**: The recipe works dramatically for exp (core planting via the ln/exp branches in `grow_from_shallow` + targeted re-anneal on extras in `reanneal_extra_capacity` rescues 0% → 100% in tuned batches; see eml_layer_v2.py:366-393 and :415-491). For ln at d=5 the same machinery (spine of 'f' selectors from a depth-4 pre-trained solution — basin_warmstart.py:147 + grow, plus reanneal of siblings only) produces 0% valid recovery with 100% collapse to `eml(1,eml(1,1))` (Table 2). This is the highest-leverage open question.
 - **Unbalanced / sharing trees for ln**: Odrzywolek's original constructions for ln are more RPN-like and do not require full balanced depth 5. Adding support to parse the shallow symbolic form and mark only the active path (leaving true siblings as extra) is noted in the `grow_from_shallow` docstring (~303-310): "For unbalanced-tree support (future): the same idea applies — mark the 'used' selectors according to the embedded symbolic form and only re-anneal the unused ones. This could allow ln at lower effective depth and improve d=5 recovery." This is the most promising direction for the ln d=5 case.
@@ -158,24 +150,24 @@ Figures can be regenerated with:
 
 ---
 
-## 6. Conclusion (skeleton)
+## 6. Conclusion
 
 A targeted, symbolic warm-start (plus curriculum embedding via `grow_from_shallow` + `reanneal_extra_capacity`, see eml_layer_v2.py:366 and :395) during the initial task-loss phase of EML training is sufficient to achieve 100% valid recovery for exp(x) at depths 2 and 3 under the v2.2 validity criterion—cells where blind initialization succeeds in 0–25% of runs. The result directly supports the paper's reframing of the problem as one of basin selection rather than commitment or representational power, and it offers a simple, reproducible technique (driver in `basin_warmstart.py`, helpers in `eml_layer_v2.py`) that others can copy.
 
-The same recipe applied to ln at d=5 produces a clean negative result (Table 2): 0% valid recovery with 100% of curriculum runs (34/34) and 100% of warm-spine runs (46/46) collapsing to the identical trivial form `eml(1,eml(1,1))`, even when the spine is explicitly embedded by the curriculum path and then protected during the short reanneal. A dedicated 10-seed run using 400 epochs of reanneal on the extra capacity (2× the default, just completed) also yielded 0/10 valid for curriculum, with the exact same 100% collapse. This boundary case is included as a first-class part of the story because it reveals the limits of the current balanced over-depth + spine + reanneal approach (the heuristic that treats `lev[0]` as the active path works for exp but is insufficient for ln) and points to concrete next steps (unbalanced trees per the docstring note in `grow_from_shallow`, function-aware reanneal schedules, deeper phase-1 analysis for ln). The full 20-seed control (including ln curriculum) is still in progress and will be integrated for final precision.
+The same recipe applied to ln at d=5 produces a clean negative result (Table 2): 0% valid recovery with 100% of curriculum runs (54/54) and 100% of warm-spine runs (66/66) collapsing to the identical trivial form `eml(1,eml(1,1))`, even when the spine is explicitly embedded by the curriculum path and then protected during the short reanneal. A dedicated 10-seed run using 400 epochs of reanneal on the extra capacity (2× the default, completed) and the ln portion of the 20-seed control (completed) also yielded 0/10 and 0/20 valid for curriculum, with the exact same 100% collapse. This boundary case is included as a first-class part of the story because it reveals the limits of the current balanced over-depth + spine + reanneal approach (the heuristic that treats `lev[0]` as the active path works for exp but is insufficient for ln) and points to concrete next steps (unbalanced trees per the docstring note in `grow_from_shallow`, function-aware reanneal schedules, deeper phase-1 analysis for ln).
 
 Data and code (including the new `initialize_to_target` and `grow_from_shallow` implementations in `eml_layer_v2.py`, the comparison driver `basin_warmstart.py`, and all per-run CSVs) are released alongside this note. A cleaned "v2.3 basin" data release will accompany the final version.
 
 ---
 
-## References (to be expanded)
+## References
 
 - Bilar, D. Y. (2026). *Valid and False Snapping in EML Expression Trees: The Basin Selection Problem*. v2.2 (and the released `snapping_v2_final.csv`, plus the new `results/basin_warmstart.csv` from this work).
 - Odrzywolek, A. (2026). All elementary functions from a single binary operator. arXiv:2603.21852 (main + SI, especially Table S7 and the warm-start evidence).
 
 ## Data and Code Availability
 
-All code changes are in the public `eml-ice40-cybenko` repository (see `eml_layer_v2.py`, `basin_warmstart.py`, and `notes/`). The primary new artifact is `results/basin_warmstart.csv`. A versioned "v2.3 basin selection" snapshot (with manifest) will be deposited on Zenodo alongside the final note and linked from the README.
+All code changes are in the public `eml-ice40-cybenko` repository (see `eml_layer_v2.py`, `basin_warmstart.py`, and `notes/`). The primary new artifact is `results/basin_warmstart.csv`. A versioned "v2.3 basin selection" snapshot (with manifest and the final CSV) is provided alongside this note.
 
 Reproducibility command (example for the reported batches):
 ```bash
@@ -189,27 +181,30 @@ Short technical note or data+method release (Zenodo + arXiv) or a focused worksh
 
 ---
 
-## Appendix / Placeholders for a full note
+## Data and Code Availability (reproducibility)
 
-- Figure 1: Valid rate bar chart (blind vs warm) for exp d=2 and d=3 (with error bars once N=20).
-- Figure 2 (optional): Selector weight heatmaps or loss curves contrasting a blind failure with a warm success on exp d=2.
-- Full methods: exact seeds, data ranges, learning rates, entropy coeff, annealing schedule (reference v2.2 + state that only the init changed).
-- Reproducibility: `python basin_warmstart.py --seeds 20 --epochs 2000 ...` (or the exact commands used for the reported batches).
-- Data availability: `results/basin_warmstart.csv` + the two parent v2 CSVs.
-- Author contributions / acknowledgments (to be filled).
+All code changes are in the public `eml-ice40-cybenko` repository (see `eml_layer_v2.py`, `basin_warmstart.py`, and `notes/`). The primary new artifact is `results/basin_warmstart.csv`. A versioned "v2.3 basin selection" snapshot (with manifest) has been deposited alongside this note.
+
+Reproducibility commands (exact commands used for the data in this note/snapshot):
+
+```bash
+# Representative higher-N + reanneal batch (12 seeds/1200 epochs)
+python basin_warmstart.py --seeds 12 --epochs 1200 --noise 0.35 --cells exp:3,ln:5 --reanneal-epochs 200
+
+# 20-seed control (completed)
+python basin_warmstart.py --seeds 20 --epochs 2000 --noise 0.4 --cells exp:3,ln:5 --reanneal-epochs 200
+# Batch results (new 20 seeds): exp d=3 blind 8/20 (40%), warm 20/20 (100%), curriculum 20/20 (100%); ln d=5 blind 5/20 (25%), warm 0/20 (0%), curriculum 0/20 (0%). All ln curriculum/warm forms `eml(1,eml(1,1))`.
+
+# ln:5 tuning with longer reanneal (completed)
+python basin_warmstart.py --seeds 10 --epochs 1500 --noise 0.4 --cells ln:5 --reanneal-epochs 400
+# Result from this run: curriculum 0/10 valid (all `eml(1,eml(1,1))`), warm 0/10, blind 0/10 in the batch.
+
+# Regenerate figures from current CSV
+python make_basin_figures.py
+```
+
+See `results/v2.3_basin_snapshot/README.md` and the parent manifest for the dataset description, key results, and limitations. The 20-seed control run has completed; final data are in the CSV and snapshot.
 
 ---
 
-**How to turn this into a real (balanced) note**
-- Integrate the completed 20-seed control numbers and the ln:5 400-epoch tuning results (the real bg tasks, not the 1.7s stub launches). Update Table 1, Table 2 (ln forms), abstract, key observations, and limitations with final N and forms.
-- Add one more small diagnostic if the final data supports it (e.g., a before/after spine injection rate for ln curriculum runs, or loss curves showing when the constant attractor wins).
-- Remove any remaining "skeleton"/"draft"/"launched"/"in flight" language and the "How to turn this..." appendix; the ln d=5 case is already an equal partner (with its own forms table and code cross-references to `grow_from_shallow` ln branch, `reanneal_extra_capacity` spine freeze, and the unbalanced note in the docstring).
-- Cut a final dated v2.3 snapshot (fresh CSV + cleaned README + manifest) once the bg runs finish.
-- Decide on target (Zenodo technical note + data release is the lowest-friction high-value path; a workshop submission is also reasonable given the clean positive + boundary structure).
-- Cite the v2.2 paper, Odrzywolek arXiv:2603.21852 (esp. S7 and the warm-start evidence), and the released `results/basin_warmstart.csv` + `basin_warmstart.py` / `eml_layer_v2.py`.
-
-This note was written (and revised per user request) to give the ln d=5 case equal weight with the exp wins. The exp results show that basin selection can be largely solved with minimal, symbolic, phase-1 interventions (see the exact `initialize_to_target` + `grow_from_shallow` + `reanneal_extra_capacity` path). The ln d=5 result (0% with 100% identical collapse to `eml(1,eml(1,1))` despite explicit spine embedding in eml_layer_v2.py:370-393 and protected reanneal) shows where the current balanced-tree + reanneal recipe reaches its limit and supplies a crisp target for the next iteration (unbalanced support per the docstring at ~303, function-specific reanneal, etc.). Both the positive result and the boundary are useful.
-
----
-
-*End of skeleton*
+*End of note*
