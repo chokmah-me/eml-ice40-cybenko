@@ -1,0 +1,2 @@
+[console_scripts]
+basin-warmstart = basin_warmstart:main

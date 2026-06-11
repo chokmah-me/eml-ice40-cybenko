@@ -1,11 +1,15 @@
 #!/usr/bin/env python3
-"""Pure stdlib analyzer for basin_warmstart.csv rates. Run: python analyze_basin_rates.py"""
+"""Pure stdlib analyzer for basin_warmstart.csv rates.
+Run: python analyze_basin_rates.py [path/to/file.csv]"""
 import csv
+import sys
 from collections import defaultdict
 
 CSV = 'results/basin_warmstart.csv'
 
-def main():
+def main(csv_path: str = None):
+    global CSV
+    CSV = csv_path or (sys.argv[1] if len(sys.argv) > 1 else CSV)
     with open(CSV, newline='') as f:
         rows = list(csv.DictReader(f))
     print(f'Total rows in {CSV}: {len(rows)}')

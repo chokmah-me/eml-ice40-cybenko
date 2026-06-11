@@ -1,0 +1,34 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "eml-basin"
+version = "2.5.0.dev0"
+description = "EML expression trees with valid-snap criterion: basin selection experiments (eml-ice40-cybenko)"
+readme = "README.md"
+license = { text = "MIT" }
+authors = [{ name = "Daniyel Yaacov Bilar", email = "chokmah-dyb@pm.me" }]
+requires-python = ">=3.10"
+dependencies = [
+    "torch>=2.0",
+    "numpy>=1.24",
+]
+keywords = ["symbolic regression", "EML operator", "expression trees", "basin selection"]
+classifiers = [
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+
+[project.optional-dependencies]
+figures = ["matplotlib>=3.7"]
+
+[project.urls]
+Homepage = "https://github.com/chokmah-me/eml-ice40-cybenko"
+
+[project.scripts]
+basin-warmstart = "basin_warmstart:main"
+
+[tool.setuptools]
+py-modules = ["eml_layer_v2", "basin_warmstart", "experiment_v2", "analyze_basin_rates"]

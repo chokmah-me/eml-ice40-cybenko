@@ -1,0 +1,4 @@
+# Versions used to produce the v2.4/v2.5 data (Python 3.14.4)
+torch==2.11.0
+numpy==2.4.4
+matplotlib==3.10.9  # figures only
