@@ -51,6 +51,18 @@ LICENSE                   code license (MIT recommended)
 signal.** The paper (Sec. 2.5) explains why pre-snap loss systematically
 understates the basin-selection failure mode.
 
+## Install & quickstart
+
+```bash
+pip install -e .          # exposes eml_layer_v2 (EMLTree, train_eml) + basin-warmstart CLI
+python examples/quickstart.py            # blind vs warm-start on exp(x), ~1 min
+python examples/reproduce_note_table.py  # headline v2.4 table from released data, no training
+```
+
+See `examples/basin_walkthrough.ipynb` for a narrated version (released-data
+rates + one live warm-start and curriculum run), and `requirements.txt` for
+the exact versions used to produce the released data.
+
 ## Reproducing
 
 ```
@@ -74,6 +86,11 @@ Paper and figures released under CC BY 4.0 (see Zenodo record metadata).
 
 ## Changelog
 
+- **v2.4** (2026-06-11): Track B released. Warm-start note
+  (`notes/basin_selection_warmstart_note.md`) + canonical 120-row post-fix
+  dataset (`results/basin_warmstart_v2.4_postfix.csv`): warm/curriculum
+  20/20 (100%) for exp d=3 and ln d=5, blind 25–35%. See CHANGELOG.md.
+
 - **v2.2** (2026-04-24): Response to review feedback. Tones down novelty framing relative to Odrzywolek (no longer claims prior work conflated commitment and validity). Removes unsupported gradient-escape-routes mechanism claim. Softens "solves completely" to "solves across tested conditions". Explains 0.000 variance in exp d=2 false snaps.
 
 - **Track B: Basin Selection Warm-Start & Curriculum (2026-04/06)**: Major empirical and tooling progress on the basin-selection problem identified in v2.2. 
@@ -85,10 +102,6 @@ Paper and figures released under CC BY 4.0 (see Zenodo record metadata).
   - Updated `ROADMAP.md`, `results/track_b_initial.md`, snapshot `results/v2.3_basin_snapshot/` (dated CSVs + README), and this changelog.
   - Data accumulated in `results/basin_warmstart.csv` (234 rows; 20-seed control + ln:5 400-epoch tuning launched in bg on feature branch; CSV grows live).
   - See `plan.md`, `notes/basin_selection_warmstart_note_skeleton.md`, `results/v2.3_basin_snapshot/README.md` and the Track B section of `results/track_b_initial.md` for full details, commands, and next steps (integrate 20-seed rates, final polish, snapshot refresh).
-
-## Roadmap & Future Directions
-
-See [ROADMAP.md](ROADMAP.md) for expansions... (unchanged pointer)
 
 ## Roadmap & Future Directions
 

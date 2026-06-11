@@ -15,3 +15,6 @@ dev/
 
 # upstream papers not to redistribute
 2603.21852v2*.pdf
+
+eml_basin.egg-info/
+*.egg-info/
