@@ -7,6 +7,14 @@ it doesn't exist yet). The file is a fragment, not a full README.
 
 ## Changelog
 
+- **v2.5-dev** (2026-06-11): Top-aligned `grow_from_shallow` removes the ln
+  over-depth curriculum structural limit. ln d=5 curriculum now 20/20 (100%)
+  via real grow-from-trained-shallow (fallback audit: 20/20 on the grow path);
+  exp d=3 and blind/warm controls reproduced exactly. Data:
+  `results/basin_warmstart_v2.5_unbalanced.csv` + snapshot; addendum:
+  `notes/v2.5_unbalanced_curriculum_addendum.md`. Also Track F packaging:
+  `pyproject.toml` (pip install -e ., `basin-warmstart` CLI), requirements.txt,
+  `examples/` (quickstart, table reproduction, walkthrough notebook).
 - **v2.4** (2026-06-11): Track B basin-selection follow-on release. New short
   technical note `notes/basin_selection_warmstart_note.md` with canonical
   120-row post-fix dataset (`results/basin_warmstart_v2.4_postfix.csv`,
