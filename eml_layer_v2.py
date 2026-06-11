@@ -326,27 +326,28 @@ class EMLTree(nn.Module):
 
         This is the natural next lever after pure symbolic warm-start.
 
-        Note on balanced vs unbalanced for ln over-depth:
+        Note on balanced vs unbalanced for ln over-depth (and the top-aligned fix):
         A single EML gate cannot act as an identity forwarder: there is no a,b
         (from {1,x,f}) such that exp(a) - ln(b) == f for arbitrary f. Therefore
         eml(f, 1) = exp(f) and eml(1, f) likewise does not preserve the subtree
-        value. Adding one (or more) extra balanced levels on top of a valid d=4
+        value. Adding one (or more) extra balanced levels *on top* of a valid d=4
         ln solution by 'f'-chaining will embed exp(ln(x)) == x (or a similar
-        non-ln function) before any training. 
+        non-ln function) before any training.
 
-        For ln curriculum at over-representational depth the driver therefore
-        reduces to the direct (fixed) initialize_to_target('ln') path; the
-        grow + extension is not used. The full-block copy + reanneal remain
-        valuable for exp and for exact-depth cases.
-
-        True deeper ln requires unbalanced / RPN-style sharing (see the note
-        below). The current grow assumes balanced binary trees. For unbalanced
-        (e.g., Odrzywolek's original ln RPN sharing subtrees, which can use fewer
-        levels), extend by parsing shallow.symbolic_form() to identify the exact
-        "active path" selectors to embed, and treat all other parallel branches
-        as extra capacity for constant bias. This could allow ln at lower effective
-        depth and improve d=5 recovery. See prior_versions/dev/ for historical
-        plans on unbalanced vs balanced.
+        The v2.5 resolution borrows the key property of unbalanced/RPN trees —
+        unused branches can simply dangle — without changing the architecture:
+        embed the shallow solution TOP-ALIGNED. Because both trees are balanced,
+        shallow level si and deep level si + (n_deep - n_shallow) have identical
+        gate counts, and child 'f' references (current[2*gi], current[2*gi+1])
+        line up exactly. The shallow's bottom gates only ever select from {1,x}
+        (direct injection), so the copied entry level ignores the deep tree's
+        new bottom levels entirely; those become dangling extra capacity biased
+        to constants, exactly like the inactive parallel branches of Odrzywolek's
+        RPN construction. The embedded function value is preserved exactly
+        (verified via pretrain_form). This is the "parse the active path, treat
+        parallel branches as extra capacity" idea from the original unbalanced
+        plan, realized inside the balanced tree by aligning at the root instead
+        of the leaves.
         """
         if self.depth <= shallow.depth:
             # No growth needed
@@ -405,48 +406,37 @@ class EMLTree(nn.Module):
                     self.levels[lev_idx][gidx][1].bias_to_symbol('1', 7.0, noise * 0.1)
 
         else:
-            # ln-style / general curriculum embed: copy the *full* shallow subtree block
-            # (all gates at each level, left-aligned) into the deep tree. This preserves
-            # any width used by the valid shallow (including right-half paths for ln form).
-            # Internal 'f' references remain valid because child 2*gi positions match within block.
-            # Then extend a forwarding 'f' on the first extra upper level's g0 (left, since
-            # left-align reduction lands in current[0] slot), siblings const.
-            # Record metadata so reanneal_extra_capacity can freeze the *entire* embedded
-            # block (not just g0) and only sharpen true extras + new-lev siblings.
+            # ln-style / general curriculum embed (v2.5): TOP-ALIGNED copy.
+            # Shallow level si maps to deep level si + delta (delta = extra levels).
+            # Balanced trees guarantee identical widths at top-aligned levels, and
+            # internal 'f' references (children at 2*gi, 2*gi+1) line up exactly,
+            # so the embedded function value is preserved bit-for-bit in symbol space.
+            # The shallow's bottom level only selects from {1,x}, so the copied entry
+            # level ignores the deep tree's new bottom levels: those dangle as extra
+            # capacity (biased to constants), like inactive RPN branches.
             n_shallow_lev = len(shallow.levels)
-            embedded_widths = []
+            n_deep_lev = len(self.levels)
+            delta = n_deep_lev - n_shallow_lev  # > 0 here (early-return above otherwise)
+            embedded_widths = [0] * delta
             for si in range(n_shallow_lev):
-                if si < len(self.levels):
-                    n_g = len(shallow.levels[si])
-                    embedded_widths.append(n_g)
-                    for gi in range(n_g):
-                        if gi < len(self.levels[si]):
-                            s_l, s_r = shallow.levels[si][gi]
-                            self.levels[si][gi][0].bias_to_symbol(s_l.symbol(), 7.5, noise)
-                            self.levels[si][gi][1].bias_to_symbol(s_r.symbol(), 7.5, noise)
-                else:
-                    embedded_widths.append(0)
+                di = si + delta
+                n_g = len(shallow.levels[si])
+                embedded_widths.append(n_g)
+                for gi in range(n_g):
+                    s_l, s_r = shallow.levels[si][gi]
+                    self.levels[di][gi][0].bias_to_symbol(s_l.symbol(), 7.5, noise)
+                    self.levels[di][gi][1].bias_to_symbol(s_r.symbol(), 7.5, noise)
 
-            # Forwarding for extra upper levels (left-align => use left f to pull current[0])
-            for lev_idx in range(n_shallow_lev, len(self.levels)):
-                if len(self.levels[lev_idx]) > 0:
-                    l, r = self.levels[lev_idx][0]
-                    l.bias_to_symbol('f', 7.0, noise * 0.5)
-                    r.bias_to_symbol('1', 5.0, noise * 0.3)
-
-            # Const everything outside the copied block + outside the extension g0
-            for lev_idx, lev in enumerate(self.levels):
-                w = embedded_widths[lev_idx] if lev_idx < len(embedded_widths) else 0
-                for gidx, (left, right) in enumerate(lev):
-                    if lev_idx < n_shallow_lev and gidx < w:
-                        continue  # copied embedded
-                    if lev_idx >= n_shallow_lev and gidx == 0:
-                        continue  # extension forward gate
+            # New bottom levels (the dangling extra capacity) -> harmless constants
+            for lev_idx in range(delta):
+                for left, right in self.levels[lev_idx]:
                     left.bias_to_symbol('1', 5.0, noise * 0.2)
                     right.bias_to_symbol('1', 5.0, noise * 0.2)
 
-            # Metadata for reanneal + debugging (pretrain_form will catch wiring issues)
-            self._embedded_nlev = n_shallow_lev
+            # Metadata for reanneal + debugging (pretrain_form will catch wiring issues).
+            # Widths are per-deep-level: 0 for dangling bottom levels => reanneal treats
+            # them as extra capacity; full widths for the embedded top block => frozen.
+            self._embedded_nlev = n_deep_lev
             self._embedded_widths = embedded_widths
             self._embedded_from_shallow_depth = getattr(shallow, 'depth', None)
 

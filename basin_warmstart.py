@@ -173,14 +173,13 @@ def main():
                         # using the best known warm init, then grow its structure into the target depth.
                         _expected = {'exp': 2, 'ln': 4, 'sqrt': 9}
                         shallow_depth = _expected.get(func, 2)
-                        # For ln at over-representational depth (shallow_depth < depth), a single
-                        # balanced EML gate cannot forward its input unchanged: eml(f, 1) = exp(f) - ln(1) = exp(f).
-                        # Therefore curriculum-ln d>4 reduces to the (now fixed) direct initialize_to_target('ln')
-                        # which plants the correct 3-gate core at the top levels. This avoids embedding the
-                        # wrong function (exp(ln(x)) == x) before training. Grow + block copy + reanneal remain
-                        # available for exp over-depth and for exact-depth cases. See grow_from_shallow docstring
-                        # and the unbalanced-tree note for the real path forward for deeper ln.
-                        if shallow_depth >= depth or func == 'ln':
+                        # v2.5: ln over-depth curriculum is now a *real* curriculum again.
+                        # grow_from_shallow embeds the trained shallow solution TOP-ALIGNED
+                        # (extra capacity dangles at the bottom as constants), which preserves
+                        # the ln value exactly — no eml-gate forwarding needed. The old
+                        # delegation to direct initialize_to_target('ln') (balanced f-chain
+                        # structural limit) is gone; see grow_from_shallow docstring.
+                        if shallow_depth >= depth:
                             tree.initialize_to_target(func, noise=args.noise)
                         else:
                             shallow = EMLTree(depth=shallow_depth)
