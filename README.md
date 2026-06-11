@@ -75,3 +75,21 @@ Paper and figures released under CC BY 4.0 (see Zenodo record metadata).
 ## Changelog
 
 - **v2.2** (2026-04-24): Response to review feedback. Tones down novelty framing relative to Odrzywolek (no longer claims prior work conflated commitment and validity). Removes unsupported gradient-escape-routes mechanism claim. Softens "solves completely" to "solves across tested conditions". Explains 0.000 variance in exp d=2 false snaps.
+
+- **Track B: Basin Selection Warm-Start & Curriculum (2026-04/06)**: Major empirical and tooling progress on the basin-selection problem identified in v2.2. 
+  - Added `initialize_to_target(func, noise=...)` (refined top-gate embedding for exp; spine for ln), `grow_from_shallow(...)` curriculum helper, and `reanneal_extra_capacity(...)` (short targeted re-anneal on extra selectors only, spine frozen) in `eml_layer_v2.py`.
+  - New `basin_warmstart.py` driver with blind/warm/curriculum modes, --reanneal-*/--seeds etc, and higher-N support.
+  - Strong results (234 rows): exp d=2 warm 100%; exp d=3 warm ~88% cumul (100% in 12-seed batches); curriculum + reanneal 100% (12/12 batch) / 50% cumul on exp d=3 (reanneal pass solves extra-level collapse). ln d=5 0% (tuning in flight).
+  - `plan.md` created saving the 5-item next-iteration list verbatim. `analyze_basin_rates.py` (pure stdlib) and `make_basin_figures.py` for stats/figures.
+  - Professional note skeleton in `notes/basin_selection_warmstart_note_skeleton.md` (Table 1, abstract, repro with exact 20-seed CLIs, figure embed, limitations); figure3 dropped to notes/.
+  - Updated `ROADMAP.md`, `results/track_b_initial.md`, snapshot `results/v2.3_basin_snapshot/` (dated CSVs + README), and this changelog.
+  - Data accumulated in `results/basin_warmstart.csv` (234 rows; 20-seed control + ln:5 400-epoch tuning launched in bg on feature branch; CSV grows live).
+  - See `plan.md`, `notes/basin_selection_warmstart_note_skeleton.md`, `results/v2.3_basin_snapshot/README.md` and the Track B section of `results/track_b_initial.md` for full details, commands, and next steps (integrate 20-seed rates, final polish, snapshot refresh).
+
+## Roadmap & Future Directions
+
+See [ROADMAP.md](ROADMAP.md) for expansions... (unchanged pointer)
+
+## Roadmap & Future Directions
+
+See [ROADMAP.md](ROADMAP.md) for expansions, prioritized tracks (analysis of the released CSV, basin-selection improvements, hardware/iCE40 revival, forests/Cybenko scaling, verification/governance, packaging), decision frameworks, and concrete next actions. It synthesizes the focused v2.2 contribution with the broader original EML + Cybenko + iCE40 vision preserved in `prior_versions/dev/`.
