@@ -7,6 +7,18 @@ it doesn't exist yet). The file is a fragment, not a full README.
 
 ## Changelog
 
+- **v2.4** (2026-06-11): Track B basin-selection follow-on release. New short
+  technical note `notes/basin_selection_warmstart_note.md` with canonical
+  120-row post-fix dataset (`results/basin_warmstart_v2.4_postfix.csv`,
+  snapshot in `results/v2.4_postfix_snapshot/`): targeted warm-start
+  (`EMLTree.initialize_to_target`) achieves 100% valid recovery for exp d=3
+  and ln d=5 (20/20 each; blind 25–35%); curriculum via `grow_from_shallow`
+  + `reanneal_extra_capacity`, with ln over-depth delegating to direct init
+  (balanced-tree structural limit, documented). Adds `basin_warmstart.py`
+  driver, `analyze_basin_rates.py`, `make_basin_figures.py`, Figure 3,
+  pretrain_form auditing column, deterministic seeding. v2.3 data retained
+  as pre-fix diagnostic only.
+- **v2.2** (2026-04-26): Review-response patches, metadata bump, repo cleanup.
 - **v2.1** (2026-04-24): Section 4 connection to Odrzywolek SI warm-start
   evidence (SI Table S7 cited as independent confirmation of basin-selection
   framing); Figure 2 blind-recovery rate comparison (this work vs Odrzywolek
