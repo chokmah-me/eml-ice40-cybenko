@@ -7,7 +7,7 @@ it doesn't exist yet). The file is a fragment, not a full README.
 
 ## Changelog
 
-- **v2.5-dev** (2026-06-11): Top-aligned `grow_from_shallow` removes the ln
+- **v2.5** (2026-06-11): Top-aligned `grow_from_shallow` removes the ln
   over-depth curriculum structural limit. ln d=5 curriculum now 20/20 (100%)
   via real grow-from-trained-shallow (fallback audit: 20/20 on the grow path);
   exp d=3 and blind/warm controls reproduced exactly. Data:

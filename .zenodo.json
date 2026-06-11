@@ -1,10 +1,10 @@
 {
   "title": "eml-ice40-cybenko: code and data for Valid and False Snapping in EML Expression Trees",
-  "description": "Code (eml_layer_v2.py, experiment_v2.py, basin_warmstart.py), paper source, and data for 'Valid and False Snapping in EML Expression Trees: The Basin Selection Problem'. v2.4 adds the warm-start/curriculum basin-selection note (notes/basin_selection_warmstart_note.md) with the canonical 120-row post-fix dataset (results/basin_warmstart_v2.4_postfix.csv, 20 seeds x {ln d=5, exp d=3} x {blind, warm, curriculum}): warm-start recovery 100% for exp d=3 and ln d=5, blind 25-35%, with auditable pretrain_form column and deterministic seeding. Includes the original 240-run v2.2 sweep CSV, the pre-fix v2.3 diagnostic corpus, and all figures.",
+  "description": "Code (eml_layer_v2.py, experiment_v2.py, basin_warmstart.py), paper source, and data for 'Valid and False Snapping in EML Expression Trees: The Basin Selection Problem'. v2.4 adds the warm-start/curriculum basin-selection note (notes/basin_selection_warmstart_note.md) with the canonical 120-row post-fix dataset (results/basin_warmstart_v2.4_postfix.csv, 20 seeds x {ln d=5, exp d=3} x {blind, warm, curriculum}): warm-start recovery 100% for exp d=3 and ln d=5, blind 25-35%, with auditable pretrain_form column and deterministic seeding. v2.5 makes ln over-depth curriculum a real curriculum via top-aligned grow_from_shallow (ln d=5 curriculum 20/20, results/basin_warmstart_v2.5_unbalanced.csv + addendum note) and adds pip-installable packaging with examples. Includes the original 240-run v2.2 sweep CSV, the pre-fix v2.3 diagnostic corpus, and all figures.",
   "upload_type": "software",
   "access_right": "open",
   "license": "MIT",
-  "version": "2.4.0",
+  "version": "2.5.0",
   "publication_date": "2026-06-11",
   "creators": [
     {
