@@ -12,7 +12,7 @@ footer: "Page ${pageNo} / ${totalPages}"
 
 **Daniyel Yaacov Bilar**, Chokmah LLC, chokmah-dyb@pm.me , ORCID: 0000-0002-9040-6914
 
-v1.0 June 12 2026
+v1.0 June 12 2026 — DOI: [10.5281/zenodo.20671272](https://doi.org/10.5281/zenodo.20671272)
 
 Technical note accompanying *Valid and False Snapping in EML Expression Trees: The Basin Selection Problem* (the "companion paper"; v2.3 at time of writing). Canonical datasets: `results/basin_warmstart_v2.4_postfix.csv` (120 rows; blind and warm results) and `results/basin_warmstart_v2.5_unbalanced.csv` (120 rows; adds the top-aligned curriculum). Snapshots in `results/v2.4_postfix_snapshot/` and `results/v2.5_unbalanced_snapshot/`.
 

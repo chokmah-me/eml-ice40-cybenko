@@ -1,4 +1,5 @@
-[![Paper DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.19736174.svg)](https://doi.org/10.5281/zenodo.19736174)
+[![Paper DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.19736173.svg)](https://doi.org/10.5281/zenodo.19736173)
+[![Note DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.20671271.svg)](https://doi.org/10.5281/zenodo.20671271)
 [![Code DOI](https://img.shields.io/badge/DOI-10.17605%2FOSF.IO%2FVRYNM-blue)](https://doi.org/10.17605/OSF.IO/VRYNM)
 
 # eml-ice40-cybenko
@@ -6,7 +7,8 @@
 Code and data for:
 
 **Valid and False Snapping in EML Expression Trees: The Basin Selection Problem**
-Daniyel Yaacov Bilar, Chokmah LLC, April 2026.
+Daniyel Yaacov Bilar, Chokmah LLC. v2.3, June 2026
+(DOI: [10.5281/zenodo.20671038](https://doi.org/10.5281/zenodo.20671038)).
 
 An empirical study of symbolic recovery in balanced-binary EML expression
 trees trained with three-phase annealing (Adam, entropy penalty,
@@ -15,10 +17,20 @@ commitment + correct symbolic form, post-snap MAE < 0.01) from *false
 snaps* (vertex commitment, wrong form) across 240 runs over three target
 functions (exp, ln, sqrt) and four tree depths.
 
+Companion technical note: **Basin Selection in EML Expression Trees:
+Targeted Warm-Start and Top-Aligned Curriculum Achieve Full Valid Recovery
+for exp and ln, Including at Over-Representational Depth**. v1.0, June 2026
+(DOI: [10.5281/zenodo.20671272](https://doi.org/10.5281/zenodo.20671272);
+source: [notes/basin_selection_warmstart_note.md](notes/basin_selection_warmstart_note.md)).
+Shows that warm-start and top-aligned curriculum initialization take the
+difficult cells (exp d=3, ln d=5) from 25-35% blind valid recovery to 20/20.
+
 ## Contents
 
 ```
 dyb-2026m-elm-basin.pdf       rendered paper
+dyb-2026m-elm-basin_tldr.md   TL;DR summaries (5 perspectives) + AI statement
+notes/basin_selection_warmstart_note.md   technical note (PDF alongside)
 figure1_heatmap_v2.png    Figure 1
 snapping_v2_final.csv     full 240-run results
 eml_layer_v2.py           EML layer + tree implementation
@@ -109,6 +121,17 @@ Code released under MIT. See `LICENSE`.
 Paper and figures released under CC BY 4.0 (see Zenodo record metadata).
 
 ## Changelog
+
+- **v2.7** (2026-06-12): Zenodo publication release. Paper revised to v2.3
+  (correlational language for the exp over-depth effect, per its own Sect. 3.4
+  disclaimer; published as DOI 10.5281/zenodo.20671038). Warm-start/curriculum
+  technical note rewritten for publication (v2.5 top-aligned curriculum merged
+  in, canonical 20-seed data only, AI Utilization Statement) and published as
+  DOI 10.5281/zenodo.20671272. Figure 3 regenerated from the canonical v2.5
+  CSV (make_basin_figures.py now plots both cells with v/n labels). TL;DR
+  companion updated to v2.3 and renamed version-neutral. Metadata fixes:
+  corrected paper-DOI badge (concept DOI), .zenodo.json related identifiers,
+  CITATION.cff dual-license note.
 
 - **v2.6** (2026-06-11): Track C hardware realization. `hardware/` package:
   CSV-form → netlist → fixed-point model → Verilog (combinational, pipelined,

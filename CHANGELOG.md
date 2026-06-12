@@ -1,11 +1,28 @@
-# Changelog snippet for README.md
+# Changelog
 
-Paste this at the top of your existing Changelog section (or create one if
-it doesn't exist yet). The file is a fragment, not a full README.
-
----
-
-## Changelog
+- **v2.7** (2026-06-12): Zenodo publication release.
+  - Paper revised to v2.3 and published (DOI 10.5281/zenodo.20671038, concept
+    DOI 10.5281/zenodo.19736173): residual causal phrasing for the exp(x)
+    over-depth improvement replaced with correlational language per the paper's
+    own Sect. 3.4 disclaimer; duplicated abstract sentence removed; Hebrew date
+    updated to 27 Sivan 5786; YAML frontmatter + ORCID added. No data changed.
+  - Technical note (`notes/basin_selection_warmstart_note.md`) rewritten for
+    publication and published as v1.0 (DOI 10.5281/zenodo.20671272, concept
+    DOI 10.5281/zenodo.20671271): v2.5 top-aligned curriculum merged in as a
+    first-class result, canonical 20-seed datasets only (v2.4_postfix + v2.5),
+    pre-fix bug story condensed to Sect. 3.1, version-neutral references to
+    the companion paper, AI Utilization Statement added, exported PDF tracked.
+  - `make_basin_figures.py` overhauled: reads the canonical
+    `basin_warmstart_v2.5_unbalanced.csv`, plots both cells (exp d=3, ln d=5)
+    x three init modes with v/n labels, legend below axes, copies to notes/.
+    `figure3_valid_rates_exp.png` regenerated.
+  - TL;DR companion updated to v2.3, renamed `dyb-2026m-elm-basin_tldr.md`
+    (version-neutral), AI Utilization Statement appended (incl. Claude Fable 5
+    release-prep disclosure).
+  - Metadata: README paper badge corrected to the concept DOI; note badge
+    added; `.zenodo.json` bad related identifier (arXiv:2604.01369, unrelated
+    paper) replaced and note DOI added; CITATION.cff dual-license note +
+    DOI identifiers.
 
 - **v2.6** (2026-06-11): Track C hardware realization (the "ice40" in the repo
   name). New `hardware/` package: any valid `symbolic_form` from the released

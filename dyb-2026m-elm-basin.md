@@ -175,7 +175,7 @@ Temperature annealing in EML expression trees solves the commitment problem acro
 
 ## Data and code
 
-All code (`eml_layer_v2.py`, `experiment_v2.py`) and the full 240-run results CSV (`snapping_v2_final.csv`, including final_loss, post_snap_loss, and symbolic_form for every run) are released with this note.
+All code (`eml_layer_v2.py`, `experiment_v2.py`) and the full 240-run results CSV (`snapping_v2_final.csv`, including final_loss, post_snap_loss, and symbolic_form for every run) are released with this note. A follow-up technical note (DOI: 10.5281/zenodo.20671272) shows that targeted warm-start and top-aligned curriculum initialization recover the difficult cells identified here at 20/20.
 
 ## References
 

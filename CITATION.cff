@@ -6,9 +6,16 @@ authors:
     affiliation: Chokmah LLC
     email: chokmah-dyb@pm.me
 title: "Valid and False Snapping in EML Expression Trees: The Basin Selection Problem"
-version: "2.6.0"
-date-released: "2026-06-11"
+version: "2.7.0"
+date-released: "2026-06-12"
 url: "https://github.com/chokmah-me/eml-ice40-cybenko"
+identifiers:
+  - type: doi
+    value: "10.5281/zenodo.19736173"
+    description: "Paper (concept DOI, resolves to latest version; v2.3 is 10.5281/zenodo.20671038)"
+  - type: doi
+    value: "10.5281/zenodo.20671271"
+    description: "Technical note (concept DOI, resolves to latest version; v1.0 is 10.5281/zenodo.20671272)"
 license: MIT
 notes: "Code is MIT-licensed; the paper and figures are released under CC BY 4.0 (see the Zenodo record metadata)."
 keywords:
