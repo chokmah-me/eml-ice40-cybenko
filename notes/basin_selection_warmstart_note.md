@@ -1,6 +1,16 @@
+---
+author: "Daniyel Yaacov Bilar"
+header: "Basin Selection in EML Expression Trees: Targeted Warm-Start and Top-Aligned Curriculum Achieve Full Valid Recovery for exp and ln"
+footer: "Page ${pageNo} / ${totalPages}"
+---
+
+<p class="hebrew-epigraph" dir="rtl" lang="he">אִם יִרְצֶה הַשֵּׁם</p>
+
 # Basin Selection in EML Expression Trees: Targeted Warm-Start and Top-Aligned Curriculum Achieve Full Valid Recovery for exp and ln, Including at Over-Representational Depth
 
-**Daniyel Yaacov Bilar**, Chokmah LLC, chokmah-dyb@pm.me
+<p class="hebrew-date" dir="rtl" lang="he">כ״ז סִיוָן ותשפ״ו</p>
+
+**Daniyel Yaacov Bilar**, Chokmah LLC, chokmah-dyb@pm.me , ORCID: 0000-0002-9040-6914
 
 v1.0 June 12 2026
 
@@ -104,6 +114,16 @@ The interventions are deliberately minimal: no schedule changes, no extra loss t
 ## 6. Conclusion
 
 A targeted symbolic warm-start, or a real curriculum (train at representational depth, grow top-aligned, re-anneal the dangling capacity, fine-tune), achieves 100% valid recovery under the v2.2 validity criterion on every tested cell — exp d=3 and ln d=5, where blind initialization succeeds in 25–35% of runs. The ln over-depth case is notable because the naive curriculum is structurally impossible in a balanced tree (no EML gate is an identity); top-aligned embedding sidesteps the limit without architectural changes. The results support reframing symbolic recovery in EML trees as basin selection rather than commitment or representational power, and the technique is simple and fully reproducible (driver in `basin_warmstart.py`, helpers in `eml_layer_v2.py`).
+
+## AI Utilization Statement
+
+This statement describes the use of AI systems in producing this work, in keeping with emerging norms for AI disclosure in scientific publishing (cf. ACM, Nature, Science 2024-2025 author guidelines).
+
+The author originated the thesis, supplied source materials, and made all editorial decisions. Claude (Anthropic; Haiku 4.5, Opus 4.5 and 4.7 via the claude.ai web interface) was used across multiple conversational sessions during the research and writing of this work, including implementation of the warm-start and curriculum code and the experimental driver. An external SME review cycle identified the embedding bugs documented in Section 3.1. Claude Fable 5 (Anthropic, via the Claude Code CLI) assisted with the release-preparation editorial pass for v1.0: revising this note for publication, regenerating Figure 1 from the canonical dataset, and preparing repository and archive-record metadata.
+
+The released code and CSVs are fully reproducible from the released artifacts. No AI system is needed to re-run the experiments or regenerate the figure. The note's empirical claims stand or fall on the released data alone. AI contribution was to the research process and writing, not to the underlying scientific result.
+
+The human author (Daniyel Yaacov Bilar) takes full responsibility for the scientific content, factual accuracy, and framing of this work. Errors, if any, are the author's.
 
 ## References
 
