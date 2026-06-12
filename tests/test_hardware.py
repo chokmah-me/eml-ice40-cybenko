@@ -21,6 +21,7 @@ from hardware.converter import extract_netlist, eval_netlist_float, eval_netlist
 from hardware.form_parser import parse_form
 from hardware.verilog_gen import emit_verilog, _hex_lines
 from hardware.verilog_gen_pipelined import emit_verilog_pipelined, gate_times, GATE_LATENCY
+from hardware.verilog_gen_stream import emit_stream_wrapper
 
 Q8_8 = FixedPointFormat(8, 8)
 Q10_8 = FixedPointFormat(10, 8)
@@ -299,6 +300,19 @@ class TestVerilogEmission:
         b = open(os.path.join(tmp_path, "t_exp_lut_b.hex")).read().splitlines()
         assert a[1:] == b[:-1]                       # lutB[i] == lutA[i+1]
         assert int(b[-1], 16) == fe.exp_lut[256] & 0xFFFF  # endpoint entry
+
+    @pytest.mark.parametrize("fmt,n_bytes", [(Q8_8, 2), (Q10_12, 3)],
+                             ids=["Q8.8", "Q10.12"])
+    def test_stream_wrapper_emission(self, tmp_path, fmt, n_bytes):
+        info = emit_stream_wrapper("core_x", FixedEML(fmt), 9, str(tmp_path))
+        assert info["bytes_per_sample"] == n_bytes
+        assert info["name"] == "core_x_stream"
+        rtl = open(info["rtl"]).read()
+        assert "module core_x_stream (" in rtl
+        assert "core_x u_core (.clk(clk), .x_in(x_s), .y_out(y_core));" in rtl
+        assert f"NIN = {n_bytes}" in rtl
+        assert "LATENCY = 9" in rtl
+        assert os.path.isfile(info["tb"])
 
     def test_pipelined_rejects_constant_netlist(self, tmp_path):
         with pytest.raises(AssertionError):

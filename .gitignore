@@ -21,3 +21,5 @@ eml_basin.egg-info/
 
 hardware/rtl/*.json
 hardware/rtl/*_sim
+hardware/rtl/*.asc
+hardware/rtl/*.bin

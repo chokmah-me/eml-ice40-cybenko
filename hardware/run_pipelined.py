@@ -13,6 +13,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from hardware.fixed_point import FixedPointFormat, FixedEML
 from hardware.form_parser import parse_form
 from hardware.verilog_gen_pipelined import emit_verilog_pipelined
+from hardware.verilog_gen_stream import emit_stream_wrapper
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 RTL_DIR = os.path.join(HERE, "rtl")
@@ -25,9 +26,13 @@ CASES = [
 
 def main():
     for name, form, fmt in CASES:
-        info = emit_verilog_pipelined(parse_form(form), FixedEML(fmt), name, RTL_DIR)
+        fe = FixedEML(fmt)
+        info = emit_verilog_pipelined(parse_form(form), fe, name, RTL_DIR)
         print(f"{name}: {info['active_gates']} gates, latency {info['latency']} cycles "
               f"-> {info['rtl']}")
+        winfo = emit_stream_wrapper(name, fe, info['latency'], RTL_DIR)
+        print(f"{winfo['name']}: {winfo['bytes_per_sample']} bytes/sample, 19 pins "
+              f"-> {winfo['rtl']}")
 
 
 if __name__ == "__main__":

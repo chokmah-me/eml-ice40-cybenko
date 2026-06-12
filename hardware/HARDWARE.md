@@ -161,7 +161,31 @@ but its bare 22-bit ports need 45 I/O pins vs the sg48's 39 — a packaging
 artifact of the port-per-bit PoC top, resolved by any serial/streaming
 wrapper; HX8K ct256 numbers shown for routed timing.
 
+## Stage 5: streaming wrapper + UP5K bitstreams (measured)
+
+`hardware/verilog_gen_stream.py` (emitted by `python -m hardware.run_pipelined`)
+wraps each pipelined core in a byte-serial interface: `in_data[7:0]+in_valid` /
+`out_data[7:0]+out_valid`, ceil(W/8) bytes per sample little-endian (output
+sign-extended), one new sample every N_IN cycles. 19 pins regardless of W —
+this resolves the stage-4 pin blocker (45 > 39 for bare Q10.12 ports).
+Deserializer → core (free-running, with a LATENCY-deep sample_valid shift
+register marking real outputs) → serializer; N_OUT == N_IN guarantees the
+serializer can never be overrun at the max input rate.
+
+`sim_check` now covers **6 designs, all bit-exact 256/256** (combinational,
+pipelined, wrapped).
+
+| Design (UP5K sg48) | LCs | EBR | I/O | Fmax (routed) | Throughput |
+|---|---|---|---|---|---|
+| exp_d2_pipe_stream (Q8.8) | 316 (5%) | 3 (10%) | 19 (48%) | 28.3 MHz | 1 sample / 2 clk ≈ 14 MS/s |
+| ln_d4_pipe_stream (Q10.12) | 1964 (37%) | 13 (43%) | 19 (48%) | 16.7 MHz | 1 sample / 3 clk ≈ 5.6 MS/s |
+
+`nextpnr --asc` + `icepack` produce valid bitstreams for both (104,090 bytes
+each — UP5K bitstreams are fixed-size). The `.asc`/`.bin` files are
+gitignored build artifacts: pin assignments are auto-placed, and a real board
+(e.g. iCEBreaker) needs its `.pcf` before flashing with `iceprog`.
+
 ## Next steps (staged)
 
-1. Streaming I/O wrapper (narrow the pin count, valid handshake) →
-   UP5K-routable ln_d4; then `icepack` bitstream + board demo.
+1. Board demo: iCEBreaker pcf (UART bridge via the FTDI), `iceprog` flash,
+   host-side script feeding samples and checking against the Python model.

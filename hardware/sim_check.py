@@ -27,12 +27,21 @@ from hardware.form_parser import parse_form
 HERE = os.path.dirname(os.path.abspath(__file__))
 RTL_DIR = os.path.join(HERE, "rtl")
 
+EXP_FORM = "eml(x,1)"
+LN_FORM = "eml(1,eml(eml(1,x),1))"
+Q8_8 = FixedPointFormat(8, 8)
+Q10_12 = FixedPointFormat(10, 12)
+
+# (name, form, format, extra source files)
 CASES = [
-    ("exp_d2", "eml(x,1)", FixedPointFormat(8, 8)),
-    ("ln_d4", "eml(1,eml(eml(1,x),1))", FixedPointFormat(10, 12)),
+    ("exp_d2", EXP_FORM, Q8_8, []),
+    ("ln_d4", LN_FORM, Q10_12, []),
     # pipelined variants (same math, clocked; emit via python -m hardware.run_pipelined)
-    ("exp_d2_pipe", "eml(x,1)", FixedPointFormat(8, 8)),
-    ("ln_d4_pipe", "eml(1,eml(eml(1,x),1))", FixedPointFormat(10, 12)),
+    ("exp_d2_pipe", EXP_FORM, Q8_8, []),
+    ("ln_d4_pipe", LN_FORM, Q10_12, []),
+    # byte-serial streaming wrappers around the pipelined cores
+    ("exp_d2_pipe_stream", EXP_FORM, Q8_8, ["exp_d2_pipe.v"]),
+    ("ln_d4_pipe_stream", LN_FORM, Q10_12, ["ln_d4_pipe.v"]),
 ]
 
 
@@ -56,11 +65,12 @@ def eval_raw(net, fe, x_raw: int) -> int:
     return cache[net.out_idx]
 
 
-def run_case(name: str, form: str, fmt: FixedPointFormat) -> int:
+def run_case(name: str, form: str, fmt: FixedPointFormat, extra_src=()) -> int:
     net = parse_form(form)
     fe = FixedEML(fmt)
     sim = os.path.join(RTL_DIR, f"{name}_sim")
-    subprocess.run(["iverilog", "-g2012", "-o", sim, f"{name}.v", f"{name}_tb.v"],
+    srcs = [f"{name}.v", f"{name}_tb.v", *extra_src]
+    subprocess.run(["iverilog", "-g2012", "-o", sim, *srcs],
                    cwd=RTL_DIR, check=True)
     out = subprocess.run(["vvp", sim], cwd=RTL_DIR, check=True,
                          capture_output=True, text=True).stdout
@@ -77,6 +87,9 @@ def run_case(name: str, form: str, fmt: FixedPointFormat) -> int:
             mismatches += 1
             if mismatches <= 5:
                 print(f"  MISMATCH {name}: x_raw={x_raw}  rtl={y_rtl}  py={y_py}")
+    if n != 256:
+        print(f"{name}: INCOMPLETE -- {n}/256 results from simulation")
+        return 256 - n + mismatches
     status = "BIT-EXACT" if mismatches == 0 else f"{mismatches} MISMATCHES"
     print(f"{name} (Q{fmt.int_bits}.{fmt.frac_bits}): {n} points, {status}")
     return mismatches
