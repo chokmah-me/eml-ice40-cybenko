@@ -1,8 +1,14 @@
+---
+author: "Daniyel Yaacov Bilar"
+header: "Valid and False Snapping in EML Expression Trees: The Basin Selection Problem"
+footer: "Page ${pageNo} / ${totalPages}"
+---
+
 <p class="hebrew-epigraph" dir="rtl" lang="he">אִם יִרְצֶה הַשֵּׁם</p>
 
 # Valid and False Snapping in EML Expression Trees: The Basin Selection Problem
 
-by **Daniyel Yaacov Bilar**, Chokmah LLC, chokmah-dyb@pm.me
+by **Daniyel Yaacov Bilar**, Chokmah LLC, chokmah-dyb@pm.me , ORCID: 0000-0002-9040-6914
 
 v2.3 June 12 2026 (v2.1: SI warm-start subsection + Figure 2. v2.2: responds to review feedback: tones down novelty framing re Odrzywolek, removes unsupported gradient-escape mechanism claim, softens "solves completely" to tested-conditions, explains 0.000 variance. v2.3: aligns remaining mechanism language with the Section 3.4 disclaimer, trims abstract)
 
