@@ -136,8 +136,32 @@ This build resolved the yosys datadir to `<suite>\share` instead of
 `<suite>\share\yosys`; fixed once by junctioning the contents of
 `share\yosys` up into `share`.
 
+## Stage 4: pipelined variant (EBR + Fmax, measured)
+
+`hardware/verilog_gen_pipelined.py` (`python -m hardware.run_pipelined`) emits
+clocked, fully streaming RTL: ROM reads are registered (the pattern yosys
+needs to infer EBR), each LUT is split into two banks (A = entries 0..255,
+B = 1..256) because iCE40 EBR has one read port and interpolation needs two
+adjacent entries per cycle, each gate is a 3-stage pipeline, and chained gates
+get delay-matched inputs (balancing registers + an x delay line). One sample
+per clock; latency = 3 cycles x chain depth (exp_d2: 3, ln_d4: 9).
+
+`python -m hardware.sim_check` covers all four designs: **bit-exact 256/256
+points each**, pipelined included — same math, different timing.
+
+| Design | LCs | EBR | Fmax (routed) | Device |
+|---|---|---|---|---|
+| exp_d2_pipe (Q8.8) | 255 / 5280 (4%) | 3 / 30 (10%) | 29.9 MHz | UP5K sg48 |
+| ln_d4_pipe (Q10.12) | 1932 (25%) | 13 (40%) | 39.1 MHz | HX8K ct256 |
+
+Pipelining moved the ROMs into block RAM and cut fabric logic sharply
+(exp_d2: 586 → 255 LCs; ln_d4: 3193 → 1932). At ~30 MHz streaming this is
+~30 Msamples/s. ln_d4_pipe synthesizes to 36% LC / 43% EBR on the UP5K too,
+but its bare 22-bit ports need 45 I/O pins vs the sg48's 39 — a packaging
+artifact of the port-per-bit PoC top, resolved by any serial/streaming
+wrapper; HX8K ct256 numbers shown for routed timing.
+
 ## Next steps (staged)
 
-1. Pipelined generator variant (registered EBR reads, per-level pipeline) →
-   real EBR utilization + Fmax.
-2. `icepack` bitstream + board demo (streaming wrapper) when hardware is on hand.
+1. Streaming I/O wrapper (narrow the pin count, valid handshake) →
+   UP5K-routable ln_d4; then `icepack` bitstream + board demo.

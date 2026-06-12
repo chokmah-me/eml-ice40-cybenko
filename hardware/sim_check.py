@@ -30,6 +30,9 @@ RTL_DIR = os.path.join(HERE, "rtl")
 CASES = [
     ("exp_d2", "eml(x,1)", FixedPointFormat(8, 8)),
     ("ln_d4", "eml(1,eml(eml(1,x),1))", FixedPointFormat(10, 12)),
+    # pipelined variants (same math, clocked; emit via python -m hardware.run_pipelined)
+    ("exp_d2_pipe", "eml(x,1)", FixedPointFormat(8, 8)),
+    ("ln_d4_pipe", "eml(1,eml(eml(1,x),1))", FixedPointFormat(10, 12)),
 ]
 
 

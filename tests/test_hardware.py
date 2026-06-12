@@ -20,6 +20,7 @@ from hardware.fixed_point import FixedPointFormat, FixedEML
 from hardware.converter import extract_netlist, eval_netlist_float, eval_netlist_fixed
 from hardware.form_parser import parse_form
 from hardware.verilog_gen import emit_verilog, _hex_lines
+from hardware.verilog_gen_pipelined import emit_verilog_pipelined, gate_times, GATE_LATENCY
 
 Q8_8 = FixedPointFormat(8, 8)
 Q10_8 = FixedPointFormat(10, 8)
@@ -272,6 +273,36 @@ class TestVerilogEmission:
         rtl = open(emit_verilog(net, FixedEML(Q10_12), "t", str(tmp_path))["rtl"]).read()
         assert "(no folded constants referenced)" in rtl
         assert "const_g" not in rtl
+
+    @pytest.mark.parametrize("form,exp_latency,n_gates",
+                             [(EXP_FORM, GATE_LATENCY, 1), (LN_FORM, 3 * GATE_LATENCY, 3)])
+    def test_pipelined_emission(self, tmp_path, form, exp_latency, n_gates):
+        net = parse_form(form)
+        fe = FixedEML(Q10_12)
+        info = emit_verilog_pipelined(net, fe, "t_pipe", str(tmp_path))
+
+        assert info["latency"] == exp_latency
+        assert gate_times(net)[net.out_idx][1] == exp_latency
+        rtl = open(info["rtl"]).read()
+        assert rtl.count("eml_gate_p #(.W") == n_gates
+        assert f"localparam LATENCY = {exp_latency};" in rtl
+        # split-bank ROM images: 256 entries each (A = 0..255, B = 1..256)
+        hexes = [f for f in os.listdir(tmp_path) if f.endswith(".hex")]
+        assert len(hexes) == 4
+        for h in hexes:
+            assert len(open(os.path.join(tmp_path, h)).read().splitlines()) == 256
+
+    def test_pipelined_banks_are_shifted_by_one(self, tmp_path):
+        fe = FixedEML(Q8_8)
+        emit_verilog_pipelined(parse_form(EXP_FORM), fe, "t", str(tmp_path))
+        a = open(os.path.join(tmp_path, "t_exp_lut_a.hex")).read().splitlines()
+        b = open(os.path.join(tmp_path, "t_exp_lut_b.hex")).read().splitlines()
+        assert a[1:] == b[:-1]                       # lutB[i] == lutA[i+1]
+        assert int(b[-1], 16) == fe.exp_lut[256] & 0xFFFF  # endpoint entry
+
+    def test_pipelined_rejects_constant_netlist(self, tmp_path):
+        with pytest.raises(AssertionError):
+            emit_verilog_pipelined(parse_form("eml(1,1)"), FixedEML(Q8_8), "t", str(tmp_path))
 
     def test_constant_netlist_emits_literal_output(self, tmp_path):
         net = parse_form("eml(1,1)")
