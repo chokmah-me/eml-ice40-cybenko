@@ -106,10 +106,38 @@ already covers 100% of released valid solutions. The parsed netlists reproduce
 the tree-extracted stage-1 error numbers bit-for-bit (cross-validation of the
 extraction path).
 
+## Stage 3: HDL simulation + synthesis (measured, OSS CAD Suite 2026-06-11)
+
+**Bit-equality (Icarus Verilog)**: `python -m hardware.sim_check` compiles each
+generated design + testbench, runs the 256-point sweep, and compares every
+output code against the Python model evaluated on the same raw inputs.
+Result: **both designs bit-exact, 256/256 points each** (exp_d2 at Q8.8,
+ln_d4 at Q10.12) — including the ln clamp path and range reduction on both
+sides of m=1.
+
+**Synthesis + place-and-route (yosys `synth_ice40` → nextpnr-ice40, UP5K sg48)**:
+
+| Design | SB_LUT4 | SB_CARRY | Placed LCs | UP5K utilization | EBR |
+|---|---|---|---|---|---|
+| exp_d2 (Q8.8) | 572 | 50 | 586 / 5280 | 11% | 0 |
+| ln_d4 (Q10.12) | 3121 | 245 | 3193 / 5280 | 60% | 0 |
+
+Both fit a UP5K outright. **Zero EBRs were inferred**: iCE40 block RAM only
+supports registered (synchronous) reads, so the combinational `$readmemh` ROMs
+were mapped into fabric LUTs. That is the dominant LUT cost — the pipelined
+variant (registered ROM reads, one stage per gate level) would move 2 ROMs per
+gate into EBRs and shrink the LUT count dramatically. Timing was not
+constrained (pure combinational design, no clock); meaningful Fmax comes with
+the pipelined variant.
+
+Toolchain note: OSS CAD Suite (Windows build 2026-06-11) installed at
+`%USERPROFILE%\tools\oss-cad-suite`; prepend its `bin` and `lib` to PATH.
+This build resolved the yosys datadir to `<suite>\share` instead of
+`<suite>\share\yosys`; fixed once by junctioning the contents of
+`share\yosys` up into `share`.
+
 ## Next steps (staged)
 
-1. Icarus/Verilator sweep of `*_tb.v` against `eval_netlist_fixed`
-   (bit-equality check) — blocked: no HDL simulator installed (checked
-   iverilog/verilator/yosys/nextpnr, all absent).
-2. yosys/nextpnr synthesis for real LUT/EBR/Fmax numbers on UP5K — same blocker.
-3. Pipelined generator variant + AXI-ish streaming wrapper for board demo.
+1. Pipelined generator variant (registered EBR reads, per-level pipeline) →
+   real EBR utilization + Fmax.
+2. `icepack` bitstream + board demo (streaming wrapper) when hardware is on hand.
