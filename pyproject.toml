@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "eml-basin"
-version = "2.5.0"
+version = "2.6.0"
 description = "EML expression trees with valid-snap criterion: basin selection experiments (eml-ice40-cybenko)"
 readme = "README.md"
 license = { text = "MIT" }
@@ -33,3 +33,4 @@ basin-warmstart = "basin_warmstart:main"
 
 [tool.setuptools]
 py-modules = ["eml_layer_v2", "basin_warmstart", "experiment_v2", "analyze_basin_rates"]
+packages = ["hardware"]

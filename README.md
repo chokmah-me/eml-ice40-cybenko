@@ -63,6 +63,31 @@ See `examples/basin_walkthrough.ipynb` for a narrated version (released-data
 rates + one live warm-start and curriculum run), and `requirements.txt` for
 the exact versions used to produce the released data.
 
+## Hardware (Track C: iCE40)
+
+The `hardware/` package realizes the repo name: snapped EML trees compiled to
+iCE40 FPGA designs. Any valid `symbolic_form` from the released CSVs becomes a
+netlist (the snapped selectors are pure routing — no weight storage), then
+fixed-point RTL with LUT-based exp/ln (range-reduced ln, interpolated), in
+combinational, pipelined (EBR-inferring), and 19-pin byte-streaming variants.
+A bit-exact integer Python model mirrors the Verilog operation-for-operation;
+Icarus simulation confirms all six generated designs match it bit-for-bit.
+Both canonical forms route on an iCE40 UP5K with valid `icepack` bitstreams:
+ln d=4 at 1964 LCs / 13 EBR / ~5.6 Msamples/s, exp d=2 at 316 LCs / 3 EBR /
+~14 Msamples/s.
+
+```bash
+python -m hardware.run_poc        # fixed-point error report + combinational RTL
+python -m hardware.run_csv        # same, driven from every valid CSV form
+python -m hardware.run_pipelined  # pipelined + streaming-wrapper RTL
+python -m hardware.sim_check      # RTL vs Python bit-equality (needs iverilog)
+python -m pytest tests/ -q        # 50-test suite incl. quantization regression bounds
+```
+
+See [hardware/HARDWARE.md](hardware/HARDWARE.md) for design details, measured
+synthesis numbers, and the OSS CAD Suite flow; error reports in
+`results/hardware_poc_report.md` and `results/hardware_csv_forms_report.md`.
+
 ## Reproducing
 
 ```
@@ -85,6 +110,17 @@ Code released under MIT. See `LICENSE`.
 Paper and figures released under CC BY 4.0 (see Zenodo record metadata).
 
 ## Changelog
+
+- **v2.6** (2026-06-11): Track C hardware realization. `hardware/` package:
+  CSV-form → netlist → fixed-point model → Verilog (combinational, pipelined,
+  byte-streaming); bit-exact RTL verification (6/6 designs, Icarus); measured
+  UP5K synthesis (ln d=4: 1964 LCs / 13 EBR / 16.7 MHz; exp d=2: 316 LCs /
+  3 EBR / 28.3 MHz) with valid bitstreams; 50-test suite. See CHANGELOG.md
+  and `hardware/HARDWARE.md`.
+
+- **v2.5** (2026-06-11): Top-aligned `grow_from_shallow` removes the ln
+  over-depth curriculum structural limit (ln d=5 curriculum 20/20); Track F
+  packaging (pip install -e ., examples, notebook). See CHANGELOG.md.
 
 - **v2.4** (2026-06-11): Track B released. Warm-start note
   (`notes/basin_selection_warmstart_note.md`) + canonical 120-row post-fix

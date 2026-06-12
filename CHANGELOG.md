@@ -7,6 +7,28 @@ it doesn't exist yet). The file is a fragment, not a full README.
 
 ## Changelog
 
+- **v2.6** (2026-06-11): Track C hardware realization (the "ice40" in the repo
+  name). New `hardware/` package: any valid `symbolic_form` from the released
+  CSVs parses to a netlist (snapped selectors are pure routing; off-path gates
+  constant-fold away) and compiles to fixed-point iCE40 RTL. Bit-exact integer
+  Python model (`fixed_point.py`: 257-entry interpolated exp LUT over the gate
+  clamp domain; range-reduced ln via leading-one detect + mantissa LUT + k·ln2)
+  mirrors the Verilog operation-for-operation. Three RTL generators:
+  combinational (`verilog_gen.py`), pipelined with EBR-inferring registered ROM
+  reads + split-bank LUTs + delay-matched chaining (`verilog_gen_pipelined.py`),
+  and a 19-pin byte-serial streaming wrapper (`verilog_gen_stream.py`).
+  Verification: Icarus bit-equality vs the Python model, 6/6 designs, 256/256
+  points each (`sim_check.py`); 50-test pytest suite locking measured
+  quantization numbers as regression bounds (exp d=2 Q8.8 MAE 0.0027; ln d=4
+  Q10.12 MAE 0.0003 / max 0.0011 — under the paper's 0.01 validity threshold
+  pointwise). Measured on iCE40 UP5K (yosys + nextpnr, OSS CAD Suite):
+  ln d=4 streaming 1964 LCs (37%) / 13 EBR (43%) / 16.7 MHz ≈ 5.6 Msamples/s;
+  exp d=2 streaming 316 LCs / 3 EBR / 28.3 MHz ≈ 14 Msamples/s; valid icepack
+  bitstreams for both. Finding: all 152 valid rows across the canonical CSVs
+  collapse to the two canonical forms, so the emitted RTL covers 100% of
+  released valid solutions. Remaining: physical board demo (pcf + iceprog).
+  Reports: `results/hardware_poc_report.md`, `results/hardware_csv_forms_report.md`;
+  docs: `hardware/HARDWARE.md`.
 - **v2.5** (2026-06-11): Top-aligned `grow_from_shallow` removes the ln
   over-depth curriculum structural limit. ln d=5 curriculum now 20/20 (100%)
   via real grow-from-trained-shallow (fallback audit: 20/20 on the grow path);
