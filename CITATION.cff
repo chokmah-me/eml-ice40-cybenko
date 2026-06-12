@@ -10,6 +10,7 @@ version: "2.6.0"
 date-released: "2026-06-11"
 url: "https://github.com/chokmah-me/eml-ice40-cybenko"
 license: MIT
+notes: "Code is MIT-licensed; the paper and figures are released under CC BY 4.0 (see the Zenodo record metadata)."
 keywords:
   - symbolic regression
   - expression trees

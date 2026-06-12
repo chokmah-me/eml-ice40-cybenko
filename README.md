@@ -18,13 +18,13 @@ functions (exp, ln, sqrt) and four tree depths.
 ## Contents
 
 ```
-dyb-2026m-elm-basin.pdf       rendered paper (add after export)
+dyb-2026m-elm-basin.pdf       rendered paper
 figure1_heatmap_v2.png    Figure 1
 snapping_v2_final.csv     full 240-run results
 eml_layer_v2.py           EML layer + tree implementation
 experiment_v2.py          training driver (2000 epochs, 3 phases)
 CITATION.cff              citation metadata
-LICENSE                   code license (MIT recommended)
+LICENSE                   code license (MIT)
 .zenodo.json              Zenodo record metadata
 ```
 
@@ -100,9 +100,8 @@ diverge to NaN; this is reported in the CSV via `nan_epoch` and
 
 ## Citing
 
-See `CITATION.cff`. The archival DOI is minted by Zenodo on release and
-will appear as a badge at the top of this README once the first release
-is published.
+See `CITATION.cff`. Archival DOIs are linked in the badges at the top of
+this README (paper: Zenodo; code: OSF).
 
 ## License
 

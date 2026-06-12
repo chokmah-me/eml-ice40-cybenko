@@ -26,9 +26,9 @@
   ],
   "related_identifiers": [
     {
-      "identifier": "arXiv:2604.01369",
+      "identifier": "10.5281/zenodo.19736174",
       "relation": "isSupplementTo",
-      "resource_type": "publication-article"
+      "resource_type": "publication-preprint"
     }
   ]
 }
