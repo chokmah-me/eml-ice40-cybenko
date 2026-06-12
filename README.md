@@ -8,7 +8,8 @@ Code and data for:
 
 **Valid and False Snapping in EML Expression Trees: The Basin Selection Problem**
 Daniyel Yaacov Bilar, Chokmah LLC. v2.3, June 2026
-(DOI: [10.5281/zenodo.20671038](https://doi.org/10.5281/zenodo.20671038)).
+(DOI: [10.5281/zenodo.20671038](https://doi.org/10.5281/zenodo.20671038);
+OSF mirror: [osf.io/648um](https://osf.io/648um/)).
 
 An empirical study of symbolic recovery in balanced-binary EML expression
 trees trained with three-phase annealing (Adam, entropy penalty,
@@ -21,6 +22,7 @@ Companion technical note: **Basin Selection in EML Expression Trees:
 Targeted Warm-Start and Top-Aligned Curriculum Achieve Full Valid Recovery
 for exp and ln, Including at Over-Representational Depth**. v1.0, June 2026
 (DOI: [10.5281/zenodo.20671272](https://doi.org/10.5281/zenodo.20671272);
+OSF mirror: [osf.io/dws85](https://osf.io/dws85/);
 source: [notes/basin_selection_warmstart_note.md](notes/basin_selection_warmstart_note.md)).
 Shows that warm-start and top-aligned curriculum initialization take the
 difficult cells (exp d=3, ln d=5) from 25-35% blind valid recovery to 20/20.
@@ -131,7 +133,9 @@ Paper and figures released under CC BY 4.0 (see Zenodo record metadata).
   CSV (make_basin_figures.py now plots both cells with v/n labels). TL;DR
   companion updated to v2.3 and renamed version-neutral. Metadata fixes:
   corrected paper-DOI badge (concept DOI), .zenodo.json related identifiers,
-  CITATION.cff dual-license note.
+  CITATION.cff dual-license note. Both records mirrored to OSF (paper:
+  [osf.io/648um](https://osf.io/648um/), note:
+  [osf.io/dws85](https://osf.io/dws85/)).
 
 - **v2.6** (2026-06-11): Track C hardware realization. `hardware/` package:
   CSV-form → netlist → fixed-point model → Verilog (combinational, pipelined,

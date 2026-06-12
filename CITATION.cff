@@ -16,6 +16,12 @@ identifiers:
   - type: doi
     value: "10.5281/zenodo.20671271"
     description: "Technical note (concept DOI, resolves to latest version; v1.0 is 10.5281/zenodo.20671272)"
+  - type: doi
+    value: "10.17605/OSF.IO/648UM"
+    description: "Paper (OSF mirror, https://osf.io/648um/)"
+  - type: doi
+    value: "10.17605/OSF.IO/DWS85"
+    description: "Technical note (OSF mirror, https://osf.io/dws85/)"
 license: MIT
 notes: "Code is MIT-licensed; the paper and figures are released under CC BY 4.0 (see the Zenodo record metadata)."
 keywords:

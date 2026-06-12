@@ -23,6 +23,9 @@
     added; `.zenodo.json` bad related identifier (arXiv:2604.01369, unrelated
     paper) replaced and note DOI added; CITATION.cff dual-license note +
     DOI identifiers.
+  - Both records mirrored to OSF with PDF, wiki, license, and tags: paper at
+    https://osf.io/648um/ (DOI 10.17605/OSF.IO/648UM), note at
+    https://osf.io/dws85/ (DOI 10.17605/OSF.IO/DWS85).
 
 - **v2.6** (2026-06-11): Track C hardware realization (the "ice40" in the repo
   name). New `hardware/` package: any valid `symbolic_form` from the released
