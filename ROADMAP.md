@@ -81,6 +81,10 @@ Once the background run finishes you will have a direct head-to-head table on ex
 **Prereqs**: v2 code (already excellent).
 
 ### Track C: Hardware Realization (Revive the "ice40" in the repo name)
+
+**Progress (2026-06-11)**: Stage 1 delivered. `hardware/` package: bit-exact fixed-point model (`fixed_point.py`, range-reduced ln replacing the old non-synthesizable log-indexed LUT), netlist extraction with constant folding from snapped v2 trees (`converter.py`), Verilog + LUT-hex + testbench emission (`verilog_gen.py`), end-to-end PoC (`run_poc.py`). Results on the canonical recovered forms: exp d=2 `eml(x,1)` Q8.8 MAE 0.0027; ln d=4 `eml(1,eml(eml(1,x),1))` Q10.12 MAE 0.0003 / max 0.0011 — both under the paper's 0.01 threshold pointwise at Q10.12. RTL in `hardware/rtl/`, report in `results/hardware_poc_report.md`, doc in `hardware/HARDWARE.md`.
+
+**Progress (2026-06-11, stage 2)**: CSV-driven generalization done — `hardware/form_parser.py` parses any `symbolic_form` into a netlist; `python -m hardware.run_csv` evaluates and emits RTL for every unique valid form in the canonical CSVs (report: `results/hardware_csv_forms_report.md`). Finding: all 152 valid rows collapse to the two canonical forms, so the emitted RTL covers 100% of released valid solutions; parsed netlists match tree-extracted numerics bit-for-bit. Remaining: HDL sim cross-check + yosys/nextpnr synthesis (blocked: no toolchain installed — iverilog/verilator/yosys/nextpnr all absent), pipelined RTL variant.
 **Why now**: Depth-2 (and some d=4) cells now have well-characterized high valid_snap rates and exact recovered forms (`eml(x,1)`, the ln 7-gate form, etc.). These are perfect targets for quantization and RTL generation. The original pipeline code exists in `prior_versions/dev/`.
 
 **Scope**:

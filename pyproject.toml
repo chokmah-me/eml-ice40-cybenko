@@ -23,6 +23,7 @@ classifiers = [
 
 [project.optional-dependencies]
 figures = ["matplotlib>=3.7"]
+dev = ["pytest>=7"]
 
 [project.urls]
 Homepage = "https://github.com/chokmah-me/eml-ice40-cybenko"
