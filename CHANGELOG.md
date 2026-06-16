@@ -1,5 +1,21 @@
 # Changelog
 
+- **v2.8** (2026-06-16): Physical iCEstick (iCE40-HX1K) board demo of the exp d=2
+  core, hardware-confirmed bit-exact (256/256).
+  - New UART bridge RTL: `hardware/rtl/icestick_exp_top.v` wraps the unmodified
+    `exp_d2_pipe_stream` core with `uart_rx.v`/`uart_tx.v` (8N1, 115200 from the
+    12 MHz oscillator); the core's back-to-back output bytes are FIFO-buffered for
+    the slower UART. Pins in `hardware/icestick.pcf` (clk 21, rx 9, tx 8, led 95).
+  - `hardware/host_demo.py` (pyserial, new `board` extra) streams the 256-point
+    sweep over USB-serial and asserts byte-for-byte equality with the Python model;
+    `hardware/build_icestick.py` runs synth/pnr/pack and optionally flashes.
+  - UART bring-up diagnostics `icestick_tx_heartbeat.v` (0x55 baud check) and
+    `icestick_echo.v` (loopback), selectable via `build_icestick.py --top`.
+  - nextpnr HX1K: 530/1280 LCs, 3/16 EBR, 69.6 MHz. ln d=4 does not fit the HX1K
+    (needs a UP5K board). sim_check still 6/6, pytest 50 pass.
+  - HARDWARE.md documents the two Windows gotchas: Zadig libusbK on Interface 0 for
+    `iceprog`, and "Load VCP" on Interface 1 for the UART COM port.
+
 - **v2.7** (2026-06-12): Zenodo publication release.
   - Paper revised to v2.3 and published (DOI 10.5281/zenodo.20671038, concept
     DOI 10.5281/zenodo.19736173): residual causal phrasing for the exp(x)

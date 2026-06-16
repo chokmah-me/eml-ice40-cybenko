@@ -90,12 +90,19 @@ Both canonical forms route on an iCE40 UP5K with valid `icepack` bitstreams:
 ln d=4 at 1964 LCs / 13 EBR / ~5.6 Msamples/s, exp d=2 at 316 LCs / 3 EBR /
 ~14 Msamples/s.
 
+The exp d=2 core also runs **on a physical Lattice iCEstick** (iCE40-HX1K) over a
+UART bridge: the host streams the 256-point sweep and the board returns codes that
+match the Python model **bit-for-bit** (`python -m hardware.host_demo`). ln d=4
+needs a UP5K board (it exceeds the HX1K's 1280 LCs).
+
 ```bash
 python -m hardware.run_poc        # fixed-point error report + combinational RTL
 python -m hardware.run_csv        # same, driven from every valid CSV form
 python -m hardware.run_pipelined  # pipelined + streaming-wrapper RTL
 python -m hardware.sim_check      # RTL vs Python bit-equality (needs iverilog)
 python -m pytest tests/ -q        # 50-test suite incl. quantization regression bounds
+python -m hardware.build_icestick --flash   # build + flash the iCEstick exp demo
+python -m hardware.host_demo --port COMx     # host bit-exact check over UART
 ```
 
 See [hardware/HARDWARE.md](hardware/HARDWARE.md) for design details, measured
@@ -123,6 +130,14 @@ Code released under MIT. See `LICENSE`.
 Paper and figures released under CC BY 4.0 (see Zenodo record metadata).
 
 ## Changelog
+
+- **v2.8** (2026-06-16): Physical iCEstick (iCE40-HX1K) board demo of the exp d=2
+  core. New UART bridge RTL (`hardware/rtl/icestick_exp_top.v` + `uart_rx/uart_tx`)
+  wraps the streaming core; `hardware/host_demo.py` (pyserial) streams the sweep and
+  confirms **256/256 bit-exact on silicon**. Build/flash helper
+  (`hardware/build_icestick.py`), heartbeat/echo bring-up diagnostics, and a `board`
+  extra (pyserial). HARDWARE.md documents the two Windows gotchas (Zadig libusbK for
+  `iceprog`; "Load VCP" for the UART COM port). exp-only: ln d=4 needs a UP5K board.
 
 - **v2.7** (2026-06-12): Zenodo publication release. Paper revised to v2.3
   (correlational language for the exp over-depth effect, per its own Sect. 3.4
