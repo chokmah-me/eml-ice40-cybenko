@@ -227,6 +227,7 @@ python -m hardware.host_demo --port COM3      # /dev/ttyUSB1 on Linux (2nd FTDI 
 ```
 
 Expected: `BIT-EXACT 256/256 -- iCEstick exp_d2 matches the Python model.`
+**Hardware-confirmed** on a physical iCEstick (2026-06-16): 256/256 bit-exact.
 
 **Flashing on Windows.** The iCEstick's FT2232H exposes two interfaces:
 **Interface 0** (config/SPI — what `iceprog` drives via libusb) and **Interface 1**
@@ -238,6 +239,15 @@ Rebind **Interface 0** to **libusbK/WinUSB** with [Zadig](https://zadig.akeo.ie)
 that is the UART port for `host_demo.py`. (Under the stock VCP driver the board
 shows up only as COM ports, not as a flashable libusb device — "Windows doesn't
 see it" for `iceprog` is expected until the rebind.)
+
+**No COM port for the UART (Windows).** Separately from flashing, the UART
+(Interface 1) needs a virtual COM port. If `Get-PnpDevice | ? InstanceId -match
+'VID_0403'` shows Interface 1 as **"USB Serial Converter B"** (Class `USB`) with no
+matching **"USB Serial Port (COMx)"** (Class `Ports`), there is no port to open and
+`host_demo.py` reads 0 bytes from whatever unrelated COMx you pick. Fix: Device
+Manager → USB controllers → *USB Serial Converter B* → Properties → **Advanced** →
+tick **"Load VCP"**, then unplug/replug. A new "USB Serial Port (COMx)" with
+InstanceId `...&MI_01` appears — open *that* port (not necessarily the lowest COMx).
 
 **UART bring-up diagnostics.** If `host_demo.py` times out (0 bytes) the link is
 dead before the core matters. Two tiny bitstreams localize the fault in one flash
