@@ -185,7 +185,45 @@ each — UP5K bitstreams are fixed-size). The `.asc`/`.bin` files are
 gitignored build artifacts: pin assignments are auto-placed, and a real board
 (e.g. iCEBreaker) needs its `.pcf` before flashing with `iceprog`.
 
-## Next steps (staged)
+## Stage 6: iCEstick board demo (HX1K, exp-only, measured)
 
-1. Board demo: iCEBreaker pcf (UART bridge via the FTDI), `iceprog` flash,
-   host-side script feeding samples and checking against the Python model.
+Physical bring-up on a **Lattice iCEstick** (iCE40-**HX1K**-tq144, ~1280 LCs,
+onboard FT2232H). Only **exp_d2** is demoed: `ln_d4_pipe_stream` is 1964 LCs and
+does not fit the HX1K (a UP5K board — iCEBreaker/UPduino — is needed for ln_d4).
+
+`hardware/rtl/icestick_exp_top.v` bridges the FT2232H USB-serial port (channel B)
+to the unmodified `exp_d2_pipe_stream` core: `uart_rx` (`hardware/rtl/uart_rx.v`)
+drives the byte-stream input; the core's two output bytes (emitted on back-to-back
+12 MHz cycles, far faster than the line rate) are captured into a small FIFO and
+fed to `uart_tx` (`hardware/rtl/uart_tx.v`). 8N1 at 115200 baud (CLKS_PER_BIT=104
+from the 12 MHz oscillator); the center green LED toggles on each result. Pins in
+`hardware/icestick.pcf` (clk 21, rx 9, tx 8, led 95).
+
+**Pre-flight sim (Icarus):** `hardware/rtl/icestick_exp_top_tb.v` UART-frames the
+256-point sweep into `rx`, decodes `tx` with a free-running background receiver,
+and prints the same `x_raw,y_raw` CSV as the other benches. Output is **bit-exact
+256/256** vs `hardware/fixed_point.py` (`eval_raw`) — the UART bridge adds no
+numeric change. (Uses a tiny CLKS_PER_BIT; the math is identical at 104.)
+
+**Synthesis + P&R (yosys `synth_ice40` → nextpnr-ice40, iCE40-HX1K tq144):**
+
+| Design | Placed LCs | HX1K util | EBR | I/O | Fmax (routed) |
+|---|---|---|---|---|---|
+| icestick_exp_top (Q8.8) | 530 / 1280 | 41% | 3 / 16 | 4 | 69.6 MHz (>> 12 MHz clk) |
+
+Build + flash (OSS CAD Suite on PATH):
+
+```
+python -m hardware.build_icestick          # yosys -> nextpnr -> icepack
+python -m hardware.build_icestick --flash   # also iceprog the board
+```
+
+**On-silicon check:** flash, then stream the sweep over USB-serial and compare
+every returned code against the Python model:
+
+```
+pip install -e .[board]                      # pyserial
+python -m hardware.host_demo --port COM3      # /dev/ttyUSB1 on Linux (2nd FTDI channel)
+```
+
+Expected: `BIT-EXACT 256/256 -- iCEstick exp_d2 matches the Python model.`

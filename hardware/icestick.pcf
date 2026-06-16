@@ -1,0 +1,6 @@
+# Lattice iCEstick (iCE40-HX1K-TQ144) pin constraints for icestick_exp_top.
+# Pins verified against the migen/amaranth iCEstick platform definitions.
+set_io clk 21          # 12 MHz onboard oscillator
+set_io rx  9           # FT2232H channel B -> FPGA (host TX)
+set_io tx  8           # FPGA -> FT2232H channel B (host RX)
+set_io led 95          # center green LED (D5)
