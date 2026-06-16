@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "eml-basin"
-version = "2.6.0"
+version = "2.8.0"
 description = "EML expression trees with valid-snap criterion: basin selection experiments (eml-ice40-cybenko)"
 readme = "README.md"
 license = { text = "MIT" }
@@ -23,6 +23,7 @@ classifiers = [
 
 [project.optional-dependencies]
 figures = ["matplotlib>=3.7"]
+board = ["pyserial>=3.5"]
 dev = ["pytest>=7"]
 
 [project.urls]

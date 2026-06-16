@@ -185,7 +185,82 @@ each — UP5K bitstreams are fixed-size). The `.asc`/`.bin` files are
 gitignored build artifacts: pin assignments are auto-placed, and a real board
 (e.g. iCEBreaker) needs its `.pcf` before flashing with `iceprog`.
 
-## Next steps (staged)
+## Stage 6: iCEstick board demo (HX1K, exp-only, measured)
 
-1. Board demo: iCEBreaker pcf (UART bridge via the FTDI), `iceprog` flash,
-   host-side script feeding samples and checking against the Python model.
+Physical bring-up on a **Lattice iCEstick** (iCE40-**HX1K**-tq144, ~1280 LCs,
+onboard FT2232H). Only **exp_d2** is demoed: `ln_d4_pipe_stream` is 1964 LCs and
+does not fit the HX1K (a UP5K board — iCEBreaker/UPduino — is needed for ln_d4).
+
+`hardware/rtl/icestick_exp_top.v` bridges the FT2232H USB-serial port (channel B)
+to the unmodified `exp_d2_pipe_stream` core: `uart_rx` (`hardware/rtl/uart_rx.v`)
+drives the byte-stream input; the core's two output bytes (emitted on back-to-back
+12 MHz cycles, far faster than the line rate) are captured into a small FIFO and
+fed to `uart_tx` (`hardware/rtl/uart_tx.v`). 8N1 at 115200 baud (CLKS_PER_BIT=104
+from the 12 MHz oscillator); the center green LED toggles on each result. Pins in
+`hardware/icestick.pcf` (clk 21, rx 9, tx 8, led 95).
+
+**Pre-flight sim (Icarus):** `hardware/rtl/icestick_exp_top_tb.v` UART-frames the
+256-point sweep into `rx`, decodes `tx` with a free-running background receiver,
+and prints the same `x_raw,y_raw` CSV as the other benches. Output is **bit-exact
+256/256** vs `hardware/fixed_point.py` (`eval_raw`) — the UART bridge adds no
+numeric change. (Uses a tiny CLKS_PER_BIT; the math is identical at 104.)
+
+**Synthesis + P&R (yosys `synth_ice40` → nextpnr-ice40, iCE40-HX1K tq144):**
+
+| Design | Placed LCs | HX1K util | EBR | I/O | Fmax (routed) |
+|---|---|---|---|---|---|
+| icestick_exp_top (Q8.8) | 530 / 1280 | 41% | 3 / 16 | 4 | 69.6 MHz (>> 12 MHz clk) |
+
+Build + flash (OSS CAD Suite on PATH):
+
+```
+python -m hardware.build_icestick          # yosys -> nextpnr -> icepack
+python -m hardware.build_icestick --flash   # also iceprog the board
+```
+
+**On-silicon check:** flash, then stream the sweep over USB-serial and compare
+every returned code against the Python model:
+
+```
+pip install -e .[board]                      # pyserial
+python -m hardware.host_demo --port COM3      # /dev/ttyUSB1 on Linux (2nd FTDI channel)
+```
+
+Expected: `BIT-EXACT 256/256 -- iCEstick exp_d2 matches the Python model.`
+**Hardware-confirmed** on a physical iCEstick (2026-06-16): 256/256 bit-exact.
+
+**Flashing on Windows.** The iCEstick's FT2232H exposes two interfaces:
+**Interface 0** (config/SPI — what `iceprog` drives via libusb) and **Interface 1**
+(the UART `host_demo.py` uses). Windows binds the FTDI serial (VCP) driver to
+Interface 0, so `iceprog` fails with `Can't find iCE FTDI USB device (... 0x6010)`.
+Rebind **Interface 0** to **libusbK/WinUSB** with [Zadig](https://zadig.akeo.ie):
+`Options → List All Devices`, select the *Interface 0* entry, set driver to
+**libusbK**, *Replace Driver*. **Leave Interface 1** as "USB Serial Port (COMx)" —
+that is the UART port for `host_demo.py`. (Under the stock VCP driver the board
+shows up only as COM ports, not as a flashable libusb device — "Windows doesn't
+see it" for `iceprog` is expected until the rebind.)
+
+**No COM port for the UART (Windows).** Separately from flashing, the UART
+(Interface 1) needs a virtual COM port. If `Get-PnpDevice | ? InstanceId -match
+'VID_0403'` shows Interface 1 as **"USB Serial Converter B"** (Class `USB`) with no
+matching **"USB Serial Port (COMx)"** (Class `Ports`), there is no port to open and
+`host_demo.py` reads 0 bytes from whatever unrelated COMx you pick. Fix: Device
+Manager → USB controllers → *USB Serial Converter B* → Properties → **Advanced** →
+tick **"Load VCP"**, then unplug/replug. A new "USB Serial Port (COMx)" with
+InstanceId `...&MI_01` appears — open *that* port (not necessarily the lowest COMx).
+
+**UART bring-up diagnostics.** If `host_demo.py` times out (0 bytes) the link is
+dead before the core matters. Two tiny bitstreams localize the fault in one flash
+cycle each (`hardware/rtl/icestick_tx_heartbeat.v`, `icestick_echo.v`):
+
+```
+python -m hardware.build_icestick --top icestick_tx_heartbeat --flash
+# then: python -c "import serial; print(serial.Serial('COM3',115200,timeout=2).read(16))"
+#   clean b'UUUU...'  -> FPGA->host tx pin + baud + clock OK; suspect the rx side
+#   garbage bytes     -> baud/clock wrong (oscillator not 12 MHz / CPB off)
+#   nothing (LED not blinking) -> tx pin wrong or not running -> swap rx/tx in icestick.pcf
+
+python -m hardware.build_icestick --top icestick_echo --flash
+# then send a byte and read it back; if it echoes, both directions + pins + baud
+# are good and any remaining failure is inside icestick_exp_top, not the link.
+```
