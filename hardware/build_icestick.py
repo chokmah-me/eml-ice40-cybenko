@@ -7,6 +7,10 @@ Requires the OSS CAD Suite on PATH (prepend its bin/ and lib/).
 
     python -m hardware.build_icestick           # synth + pnr + pack
     python -m hardware.build_icestick --flash    # also iceprog the board
+
+Bring-up diagnostics (one flash cycle each) isolate a dead UART link:
+    python -m hardware.build_icestick --top icestick_tx_heartbeat --flash
+    python -m hardware.build_icestick --top icestick_echo --flash
 """
 
 import argparse
@@ -17,9 +21,14 @@ import sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 RTL = os.path.join(HERE, "rtl")
 PCF = os.path.join(HERE, "icestick.pcf")
-TOP = "icestick_exp_top"
-SRCS = ["icestick_exp_top.v", "exp_d2_pipe_stream.v", "exp_d2_pipe.v",
-        "uart_rx.v", "uart_tx.v"]
+
+# top module -> Verilog sources it needs
+BUILDS = {
+    "icestick_exp_top": ["icestick_exp_top.v", "exp_d2_pipe_stream.v",
+                         "exp_d2_pipe.v", "uart_rx.v", "uart_tx.v"],
+    "icestick_tx_heartbeat": ["icestick_tx_heartbeat.v", "uart_tx.v"],
+    "icestick_echo": ["icestick_echo.v", "uart_rx.v", "uart_tx.v"],
+}
 
 
 def run(cmd):
@@ -28,18 +37,22 @@ def run(cmd):
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description="Build/flash the iCEstick exp_d2 demo")
+    ap = argparse.ArgumentParser(description="Build/flash an iCEstick bitstream")
+    ap.add_argument("--top", default="icestick_exp_top", choices=sorted(BUILDS),
+                    help="top module to build (default: the exp_d2 demo)")
     ap.add_argument("--flash", action="store_true", help="iceprog the board after packing")
     args = ap.parse_args()
 
-    run(["yosys", "-q", "-p", f"synth_ice40 -top {TOP} -json {TOP}.json", *SRCS])
+    top = args.top
+    srcs = BUILDS[top]
+    run(["yosys", "-q", "-p", f"synth_ice40 -top {top} -json {top}.json", *srcs])
     run(["nextpnr-ice40", "--hx1k", "--package", "tq144", "--pcf", PCF,
-         "--json", f"{TOP}.json", "--asc", f"{TOP}.asc"])
-    run(["icepack", f"{TOP}.asc", f"{TOP}.bin"])
-    print(f"\nBitstream: {os.path.join(RTL, TOP + '.bin')}")
+         "--json", f"{top}.json", "--asc", f"{top}.asc"])
+    run(["icepack", f"{top}.asc", f"{top}.bin"])
+    print(f"\nBitstream: {os.path.join(RTL, top + '.bin')}")
     if args.flash:
         try:
-            run(["iceprog", f"{TOP}.bin"])
+            run(["iceprog", f"{top}.bin"])
         except subprocess.CalledProcessError:
             sys.exit(
                 "\niceprog could not access the board.\n"

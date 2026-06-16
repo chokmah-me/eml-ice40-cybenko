@@ -238,3 +238,19 @@ Rebind **Interface 0** to **libusbK/WinUSB** with [Zadig](https://zadig.akeo.ie)
 that is the UART port for `host_demo.py`. (Under the stock VCP driver the board
 shows up only as COM ports, not as a flashable libusb device — "Windows doesn't
 see it" for `iceprog` is expected until the rebind.)
+
+**UART bring-up diagnostics.** If `host_demo.py` times out (0 bytes) the link is
+dead before the core matters. Two tiny bitstreams localize the fault in one flash
+cycle each (`hardware/rtl/icestick_tx_heartbeat.v`, `icestick_echo.v`):
+
+```
+python -m hardware.build_icestick --top icestick_tx_heartbeat --flash
+# then: python -c "import serial; print(serial.Serial('COM3',115200,timeout=2).read(16))"
+#   clean b'UUUU...'  -> FPGA->host tx pin + baud + clock OK; suspect the rx side
+#   garbage bytes     -> baud/clock wrong (oscillator not 12 MHz / CPB off)
+#   nothing (LED not blinking) -> tx pin wrong or not running -> swap rx/tx in icestick.pcf
+
+python -m hardware.build_icestick --top icestick_echo --flash
+# then send a byte and read it back; if it echoes, both directions + pins + baud
+# are good and any remaining failure is inside icestick_exp_top, not the link.
+```
