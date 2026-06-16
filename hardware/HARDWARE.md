@@ -227,3 +227,14 @@ python -m hardware.host_demo --port COM3      # /dev/ttyUSB1 on Linux (2nd FTDI 
 ```
 
 Expected: `BIT-EXACT 256/256 -- iCEstick exp_d2 matches the Python model.`
+
+**Flashing on Windows.** The iCEstick's FT2232H exposes two interfaces:
+**Interface 0** (config/SPI — what `iceprog` drives via libusb) and **Interface 1**
+(the UART `host_demo.py` uses). Windows binds the FTDI serial (VCP) driver to
+Interface 0, so `iceprog` fails with `Can't find iCE FTDI USB device (... 0x6010)`.
+Rebind **Interface 0** to **libusbK/WinUSB** with [Zadig](https://zadig.akeo.ie):
+`Options → List All Devices`, select the *Interface 0* entry, set driver to
+**libusbK**, *Replace Driver*. **Leave Interface 1** as "USB Serial Port (COMx)" —
+that is the UART port for `host_demo.py`. (Under the stock VCP driver the board
+shows up only as COM ports, not as a flashable libusb device — "Windows doesn't
+see it" for `iceprog` is expected until the rebind.)

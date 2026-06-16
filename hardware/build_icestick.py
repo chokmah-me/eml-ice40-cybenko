@@ -38,7 +38,19 @@ def main() -> int:
     run(["icepack", f"{TOP}.asc", f"{TOP}.bin"])
     print(f"\nBitstream: {os.path.join(RTL, TOP + '.bin')}")
     if args.flash:
-        run(["iceprog", f"{TOP}.bin"])
+        try:
+            run(["iceprog", f"{TOP}.bin"])
+        except subprocess.CalledProcessError:
+            sys.exit(
+                "\niceprog could not access the board.\n"
+                "If you saw \"Can't find iCE FTDI USB device\": on Windows the FTDI\n"
+                "serial driver is bound to the iCEstick's config interface, so libusb\n"
+                "cannot claim it. Fix with Zadig (https://zadig.akeo.ie):\n"
+                "  Options -> List All Devices, select the *Interface 0* entry\n"
+                "  (Dual RS232-HS / iCEstick Interface 0), set driver to libusbK,\n"
+                "  Replace Driver. Leave Interface 1 as USB Serial (COM) for the UART.\n"
+                "Then re-run with --flash. (The bitstream above is already built.)"
+            )
         print("Flashed. Now run: python -m hardware.host_demo --port <COMx>")
     else:
         print("Flash with: python -m hardware.build_icestick --flash")
