@@ -10,11 +10,15 @@ footer: "Page ${pageNo} / ${totalPages}"
 
 **Daniyel Yaacov Bilar**, Chokmah LLC — ORCID: 0000-0002-9040-6914
 
-v0.3 draft — Track C note accompanying *eml-ice40-cybenko*
+v0.4 draft — Track C note accompanying *eml-ice40-cybenko*
 (v0.2: 8-seed best-of-N training; every cell carries a real synthesized area —
 no "intractable" rows; figure/tables regenerated from the multi-seed sweep.
 v0.3: added the direct-ROM baseline (§3.5) — bit-exact, exhaustively verifiable,
-ties symbolic exp but infeasible for ln.)
+ties symbolic exp but infeasible for ln.
+v0.4: reframed the MLP as a *learned-function* baseline rather than "the
+conventional" approach — the conventional engineering choices are LUT/ROM (§3.5),
+CORDIC, and polynomial approximation; and made §2 preempt the
+quantization-aware-training (QAT) fairness objection explicitly.)
 
 Companion artifacts: `mlp/` (this study), `hardware/` (snapped-EML units),
 `results/mlp_pareto.csv` (synthesis sweep), `notes/figure_symbolic_vs_mlp.png`.
@@ -29,8 +33,12 @@ inputs routed from `{1, x, child}`. Track C compiled the two canonical recovered
 forms (exp `eml(x,1)`, ln `eml(1,eml(eml(1,x),1))`) to fixed-point iCE40 RTL and
 confirmed them **bit-exact on a physical iCEstick** (256/256). This note asks the
 natural baseline question: *how does such a learned symbolic primitive compare to
-the conventional way to put a learned scalar function on a small FPGA — a
-quantized MLP?* We train tiny ReLU MLPs (width H ∈ {4,8,16,32}, depth ∈ {1,2}) to
+the obvious learned-function baseline on a small FPGA — a quantized MLP?* (The
+classical, non-learned engineering choices — a direct LUT/ROM, CORDIC, or a
+polynomial/minimax approximant — are a separate axis; we take up the strongest of
+them, the direct ROM, in §3.5. The MLP is the relevant baseline here because it is
+the *learned* alternative to a learned symbolic primitive, not because it is how a
+hand-engineer would build an exp unit.) We train tiny ReLU MLPs (width H ∈ {4,8,16,32}, depth ∈ {1,2}) to
 approximate the same `exp` and `ln` targets, quantize them to the **same Q-formats**
 (Q8.8 for exp, Q10.12 for ln), and push them through the **identical** golden-model
 → Icarus → yosys/nextpnr → iceprog pipeline used for the symbolic units, so both
@@ -95,6 +103,22 @@ function exactly up to LUT interpolation; the ReLU MLP pays a piecewise-linear
 approximation tax. (Selection is by float-grid max-error, so a few *dominated* cells
 show a small fp wrinkle — e.g. exp h16 d2's 0.093 ≳ h8 d2's 0.083 — but these sit
 above the frontier and do not affect the comparison.)
+
+**On QAT fairness.** A referee may object that we *post-training quantize* the MLP
+(train in float, then cast to Q8.8/Q10.12) and that quantization-aware training
+(QAT) would give the baseline a fairer shot. The data already answer this: the
+fixed-point error tracks the float error to well within the symbolic–MLP gap at
+every cell (`fp max-err` vs `float max-err` columns, §3 tables), so quantization is
+not what separates the two. QAT can only recover the (already small) PTQ residual —
+e.g. exp h32 d2 is 0.048 fp vs 0.033 float, a ~0.015 quantization slack — and even
+*driving that residual to zero* leaves the best MLP at its float ceiling (exp 0.033,
+ln 0.059), still **above** the symbolic unit's *fixed-point* accuracy (exp 0.015,
+ln 0.0011). The gap is set by the ReLU network's piecewise-linear approximation
+capacity, which QAT does not change; QAT optimizes the rounding, not the function
+class. We therefore report PTQ numbers and note that the fair-QAT upper bound on the
+MLP — its float ceiling — does not reach the symbolic point either. (The symbolic
+unit, by contrast, has no float/fixed gap to recover: it *is* the fixed-point image
+of the true function up to LUT interpolation.)
 
 ## 3. Area and the Pareto frontier
 
@@ -252,6 +276,9 @@ the HX8K path for the on-silicon MLP confirmation.
 - MLPs are small and trained to convergence on a dense grid; larger or differently
   regularized networks could shift the frontier but not cross the symbolic point at
   the accuracies observed here.
+- MLPs are post-training quantized, not QAT-trained; as argued in §2 this is not the
+  limiting factor (the float ceiling already lies above the symbolic accuracy), but
+  we report PTQ numbers rather than a QAT sweep.
 
 ---
 
