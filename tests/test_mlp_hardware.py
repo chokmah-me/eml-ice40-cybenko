@@ -134,3 +134,40 @@ class TestTrainedCells:
                     assert err > SYM[func], (
                         f"{func} h{h} d{d} fp_maxerr {err} <= symbolic {SYM[func]} "
                         "-- an MLP edged the symbolic unit on accuracy; revisit the claim")
+
+
+class TestArityTwoInput:
+    """The 2-input experiment: symbolic cost is additive, ROM cost multiplicative.
+
+    Toolchain-free (golden models + size formula only); no synthesis needed.
+    """
+
+    def test_symbolic_2in_is_native_gate_and_cheap_storage(self):
+        # f(x,y) = exp(x) - ln(y) is the raw EML gate: two 257-entry LUT legs,
+        # accurate, and stored independently of input wordlength.
+        from mlp.symbolic_2in import error_report
+        r = error_report()
+        assert r["lut_entries"] == 2 * 257            # additive, width-independent
+        assert r["fp_maxerr"] < 0.05                  # combined exp+ln Q8.8 error
+
+    def test_rom_2in_explodes_before_matching_symbolic(self):
+        # The 2-D ROM is 2^(2*Win) entries. At any size that fits an HX8K it is far
+        # less accurate than the symbolic unit; it only reaches symbolic accuracy
+        # once it has overflowed every iCE40. That is the arity claim, as data.
+        from mlp.rom_baseline import error_report_2d
+        from mlp.symbolic_2in import error_report as sym_err
+        sym = sym_err()["fp_maxerr"]
+
+        feasible = [error_report_2d(w) for w in (4, 6)]
+        for r in feasible:
+            assert r["feasible_hx8k"]
+            assert r["fp_maxerr"] > sym          # fits, but worse than symbolic
+
+        accurate = error_report_2d(8)
+        assert accurate["fp_maxerr"] < 0.05      # finally ~symbolic accuracy...
+        assert not accurate["feasible_hx8k"]     # ...but no longer fits any iCE40
+
+    def test_rom_2in_entry_count_is_multiplicative(self):
+        from mlp.rom_baseline import rom_spec_2d
+        assert rom_spec_2d(6, Q8_8)["n_entries"] == (1 << 6) * (1 << 6)
+        assert rom_spec_2d(8, Q8_8)["n_entries"] == (1 << 8) * (1 << 8)

@@ -192,9 +192,83 @@ endmodule
             "latency": 2, "spec": spec}
 
 
+# --------------------------------------------------------------------------- #
+# 2-input direct ROM (arity experiment).
+#
+# A direct table for f(x, y) = exp(x) - ln(y) is addressed by BOTH input codes:
+# addr = {x_code, y_code}, so its entry count is the *product* 2^(Wx+Wy). This is
+# the multiplicative-vs-additive contrast with the symbolic unit (mlp/symbolic_2in.py),
+# whose two LUT legs total 514 entries regardless of input wordlength. We sweep a
+# common per-input wordlength Win and report, at matched input precision, the ROM's
+# size/feasibility and its accuracy -- the table fits at coarse Win and explodes
+# (infeasible on any iCE40) well before it reaches the symbolic unit's accuracy.
+
+TWO_IN_DOMAIN = {"x": (-2.0, 2.0), "y": (0.1, 10.0)}     # exp leg, ln leg
+HX8K_EBR = 32
+
+
+def _true_2in(x: float, y: float) -> float:
+    return math.exp(x) - math.log(y)
+
+
+def rom_spec_2d(win: int, fmt: FixedPointFormat) -> dict:
+    """Spec for a 2-input ROM: each input quantized to `win` codes over its domain."""
+    W = fmt.total_bits
+    n_per = 1 << win                       # codes per input axis
+    n_entries = n_per * n_per              # product -> multiplicative growth
+    rom_bits = n_entries * W
+    n_ebr = math.ceil(n_entries / 256) * math.ceil(W / 16)
+    return {"win": win, "fmt": fmt, "n_per": n_per, "n_entries": n_entries,
+            "rom_bits": rom_bits, "n_ebr": n_ebr, "W": W}
+
+
+def error_report_2d(win: int, fmt: FixedPointFormat = None, npts: int = 129) -> dict:
+    """Fixed-point max-err/MAE of the 2-input ROM at per-input resolution `win`.
+
+    The ROM stores quantize(f(x_k, y_l)) at the grid of code centers; a query
+    snaps each input to its nearest code (the address), so error has two parts:
+    input-quantization (coarse for small win) and output-quantization.
+    """
+    fmt = fmt or FixedPointFormat(8, 8)
+    spec = rom_spec_2d(win, fmt)
+    (xlo, xhi), (ylo, yhi) = TWO_IN_DOMAIN["x"], TWO_IN_DOMAIN["y"]
+    n_per = spec["n_per"]
+
+    def code(v, lo, hi):
+        idx = int(round((v - lo) / (hi - lo) * (n_per - 1)))
+        return 0 if idx < 0 else (n_per - 1 if idx >= n_per else idx)
+
+    def center(idx, lo, hi):
+        return lo + idx * (hi - lo) / (n_per - 1)
+
+    errs = []
+    for i in range(npts):
+        x = xlo + i * (xhi - xlo) / (npts - 1)
+        xc = center(code(x, xlo, xhi), xlo, xhi)
+        for j in range(npts):
+            y = ylo + j * (yhi - ylo) / (npts - 1)
+            yc = center(code(y, ylo, yhi), ylo, yhi)
+            stored = fmt.dequantize(fmt.quantize(_true_2in(xc, yc)))
+            errs.append(abs(stored - _true_2in(x, y)))
+    return {"win": win, "n_entries": spec["n_entries"], "n_ebr": spec["n_ebr"],
+            "fp_mae": sum(errs) / len(errs), "fp_maxerr": max(errs),
+            "feasible_hx8k": spec["n_ebr"] <= HX8K_EBR}
+
+
+def two_in_sweep(wins=(4, 6, 8, 10), fmt: FixedPointFormat = None) -> list:
+    """The arity table: ROM size/feasibility/accuracy vs per-input wordlength."""
+    return [error_report_2d(w, fmt) for w in wins]
+
+
 if __name__ == "__main__":
     print(f"{'func':5} {'entries':>8} {'EBR':>5} {'fp_maxerr':>10} {'feasible(HX8K)':>15}")
     for func in ("exp", "ln"):
         r = error_report(func)
         print(f"{func:5} {r['n_entries']:8d} {r['n_ebr']:5d} {r['fp_maxerr']:10.5f} "
               f"{str(r['feasible_hx8k']):>15}")
+
+    print("\n2-input direct ROM for f(x,y) = exp(x) - ln(y), Q8.8 output:")
+    print(f"{'Win/in':>6} {'entries':>10} {'EBR':>6} {'fp_maxerr':>10} {'feasible(HX8K)':>15}")
+    for r in two_in_sweep():
+        print(f"{r['win']:6d} {r['n_entries']:10d} {r['n_ebr']:6d} "
+              f"{r['fp_maxerr']:10.5f} {str(r['feasible_hx8k']):>15}")
