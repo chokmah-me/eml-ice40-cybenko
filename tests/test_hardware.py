@@ -304,7 +304,7 @@ class TestVerilogEmission:
     @pytest.mark.parametrize("fmt,n_bytes", [(Q8_8, 2), (Q10_12, 3)],
                              ids=["Q8.8", "Q10.12"])
     def test_stream_wrapper_emission(self, tmp_path, fmt, n_bytes):
-        info = emit_stream_wrapper("core_x", FixedEML(fmt), 9, str(tmp_path))
+        info = emit_stream_wrapper("core_x", fmt, 9, str(tmp_path))
         assert info["bytes_per_sample"] == n_bytes
         assert info["name"] == "core_x_stream"
         rtl = open(info["rtl"]).read()

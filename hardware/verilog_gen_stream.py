@@ -17,10 +17,11 @@ shift register LATENCY deep marks which core outputs are real.
 """
 
 import os
-from .fixed_point import FixedEML
+from .fixed_point import FixedPointFormat
 
-def emit_stream_wrapper(core_name: str, fe: FixedEML, latency: int, out_dir: str) -> dict:
-    fmt = fe.fmt
+def emit_stream_wrapper(core_name: str, fmt: FixedPointFormat, latency: int, out_dir: str) -> dict:
+    # Core-agnostic: only needs the Q-format (total bits) of the wrapped core,
+    # so it wraps any clocked (.clk,.x_in,.y_out) core -- snapped-EML or MLP.
     W = fmt.total_bits
     n = (W + 7) // 8          # bytes per sample, in and out
     wb = 8 * n

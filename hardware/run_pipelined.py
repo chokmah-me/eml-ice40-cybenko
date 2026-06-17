@@ -30,7 +30,7 @@ def main():
         info = emit_verilog_pipelined(parse_form(form), fe, name, RTL_DIR)
         print(f"{name}: {info['active_gates']} gates, latency {info['latency']} cycles "
               f"-> {info['rtl']}")
-        winfo = emit_stream_wrapper(name, fe, info['latency'], RTL_DIR)
+        winfo = emit_stream_wrapper(name, fe.fmt, info['latency'], RTL_DIR)
         print(f"{winfo['name']}: {winfo['bytes_per_sample']} bytes/sample, 19 pins "
               f"-> {winfo['rtl']}")
 

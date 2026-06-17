@@ -1,0 +1,18 @@
+# Pin constraints for the Lattice iCE40-HX8K-B-EVN Breakout Board (HX8K, CT256).
+# For the UART demo tops (icestick_exp_top / icestick_mlp_top): clk, rx, tx, led.
+#
+# clock + LEDs are the well-documented board pins (same as icestorm's hx8k.pcf):
+#   12 MHz oscillator on J3; user LEDs D1..D8 on the pins below.
+set_io clk J3
+set_io led B5            # D1 (activity LED, toggles per result)
+
+# UART rx/tx -- IMPORTANT, READ BEFORE FLASHING:
+# Unlike the iCEstick, the HX8K Breakout Board's onboard FT2232H is wired for
+# *SPI configuration only* -- it does NOT bridge a UART to FPGA pins. You must
+# attach an EXTERNAL 3.3 V USB-serial adapter (e.g. an FTDI cable):
+#   adapter TX -> FPGA rx pin     adapter RX -> FPGA tx pin     GND -> GND
+# The two pins below are general IO on the CT256 broken out to the board headers;
+# VERIFY them against your board's silkscreen/schematic and move them to whichever
+# header pins you actually wire. host_demo.py then opens that adapter's COM port.
+set_io rx  B16           # external USB-UART TX -> here   (verify on header)
+set_io tx  C16           # here -> external USB-UART RX   (verify on header)

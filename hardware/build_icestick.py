@@ -20,12 +20,22 @@ import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 RTL = os.path.join(HERE, "rtl")
-PCF = os.path.join(HERE, "icestick.pcf")
+
+# Board/device profiles. The UART demo tops (clk/rx/tx/led, 12 MHz -> CPB=104)
+# are device-agnostic, so a board is just nextpnr device+package + a .pcf.
+DEVICES = {
+    "hx1k": {"package": "tq144", "pcf": "icestick.pcf"},       # iCEstick (default)
+    "hx8k": {"package": "ct256", "pcf": "hx8k_breakout.pcf"},  # HX8K-B-EVN breakout
+}
 
 # top module -> Verilog sources it needs
 BUILDS = {
     "icestick_exp_top": ["icestick_exp_top.v", "exp_d2_pipe_stream.v",
                          "exp_d2_pipe.v", "uart_rx.v", "uart_tx.v"],
+    # MLP baseline (symbolic-vs-MLP study): emit the core first with
+    #   python -m mlp.board --func exp --h <H> --depth <D>
+    "icestick_mlp_top": ["icestick_mlp_top.v", "mlp_board_core_stream.v",
+                         "mlp_board_core.v", "uart_rx.v", "uart_tx.v"],
     "icestick_tx_heartbeat": ["icestick_tx_heartbeat.v", "uart_tx.v"],
     "icestick_echo": ["icestick_echo.v", "uart_rx.v", "uart_tx.v"],
 }
@@ -37,16 +47,21 @@ def run(cmd):
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description="Build/flash an iCEstick bitstream")
+    ap = argparse.ArgumentParser(description="Build/flash an iCE40 bitstream (iCEstick or HX8K breakout)")
     ap.add_argument("--top", default="icestick_exp_top", choices=sorted(BUILDS),
                     help="top module to build (default: the exp_d2 demo)")
+    ap.add_argument("--device", default="hx1k", choices=sorted(DEVICES),
+                    help="target board/device (default: hx1k = iCEstick)")
+    ap.add_argument("--pcf", help="override the device's default .pcf")
     ap.add_argument("--flash", action="store_true", help="iceprog the board after packing")
     args = ap.parse_args()
 
     top = args.top
     srcs = BUILDS[top]
+    dev = DEVICES[args.device]
+    pcf = os.path.join(HERE, args.pcf) if args.pcf else os.path.join(HERE, dev["pcf"])
     run(["yosys", "-q", "-p", f"synth_ice40 -top {top} -json {top}.json", *srcs])
-    run(["nextpnr-ice40", "--hx1k", "--package", "tq144", "--pcf", PCF,
+    run(["nextpnr-ice40", f"--{args.device}", "--package", dev["package"], "--pcf", pcf,
          "--json", f"{top}.json", "--asc", f"{top}.asc"])
     run(["icepack", f"{top}.asc", f"{top}.bin"])
     print(f"\nBitstream: {os.path.join(RTL, top + '.bin')}")

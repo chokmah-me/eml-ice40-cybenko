@@ -1,0 +1,15 @@
+Provenance for results/mlp_pareto.csv (symbolic-vs-MLP synthesis sweep)
+generated: 2026-06-17T15:04:23
+device: nextpnr-ice40 --up5k --package sg48
+yosys_timeout_s: 3600  pnr_timeout_s: 600
+lc_est = yosys SB_LUT4 count (pre-P&R proxy); lcs = nextpnr ICESTORM_LC when placed, else lc_est (area_source column).
+
+host: DESKTOP-7HDI2D1 (Windows-11-10.0.26200-SP0)
+yosys: Yosys 0.66+70 (git sha1 8eb313307, Release, GNU /usr/bin/x86_64-w64-mingw32-g++ 13.2.1)
+nextpnr-ice40: "nextpnr-ice40" -- Next Generation Place and Route (Version nextpnr-0.10-77-g32324500)
+
+area_source values:
+  pnr         = nextpnr ICESTORM_LC (placed; >100% means overflow, still real)
+  overflow-lb = synth did not finish in 3600s; lower bound = largest measured
+                same-function cell (these cells lose on accuracy anyway)
+  hardware.md = snapped-EML reference from the stage-5 stream table
