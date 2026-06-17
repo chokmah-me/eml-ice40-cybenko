@@ -10,9 +10,11 @@ footer: "Page ${pageNo} / ${totalPages}"
 
 **Daniyel Yaacov Bilar**, Chokmah LLC — ORCID: 0000-0002-9040-6914
 
-v0.2 draft — Track C note accompanying *eml-ice40-cybenko*
+v0.3 draft — Track C note accompanying *eml-ice40-cybenko*
 (v0.2: 8-seed best-of-N training; every cell carries a real synthesized area —
-no "intractable" rows; figure/tables regenerated from the multi-seed sweep.)
+no "intractable" rows; figure/tables regenerated from the multi-seed sweep.
+v0.3: added the direct-ROM baseline (§3.5) — bit-exact, exhaustively verifiable,
+ties symbolic exp but infeasible for ln.)
 
 Companion artifacts: `mlp/` (this study), `hardware/` (snapped-EML units),
 `results/mlp_pareto.csv` (synthesis sweep), `notes/figure_symbolic_vs_mlp.png`.
@@ -42,8 +44,13 @@ costs **1423 LCs at 0.40 max-error** (best of 8 seeds), versus the symbolic exp
 unit's **316 LCs at 0.015**. (2) **Exact verifiability:** the symbolic unit is bit-exact to the true
 function's fixed-point image and exhaustively checkable over its 256-code input
 domain; the MLP is bit-exact only to *its own* quantized model, with a residual
-approximation error floor set by training. Both claims are reproducible from the
-scripts in `mlp/`, every RTL variant verified bit-exact 256/256 in simulation.
+approximation error floor set by training. We also test the obvious third option — a
+**direct ROM** `ROM[x]=quantize(f(x))`, which is itself bit-exact and exhaustively
+verifiable — and find it *ties* the symbolic exp unit (8 EBR + 97 LC, same accuracy)
+but is **infeasible for ln** (the 22-bit input needs ≈512 block RAMs, 16× an HX8K): the
+symbolic/LUT unit is precisely the *compression* of that ROM, and its advantage grows
+with input width and arity (§3.5). All claims are reproducible from the scripts in
+`mlp/`, every RTL variant verified bit-exact 256/256 in simulation.
 
 ---
 
@@ -148,6 +155,49 @@ layer is built from fabric LUTs and carry chains, and area scales with the MAC c
 symbolic unit's accuracy. The snapped EML unit's cost is just two small interpolated
 LUTs per gate.
 
+## 3.5 The direct-ROM baseline — and why it doesn't dispose of the symbolic unit
+
+The sharpest alternative to *both* the snapped-EML unit and the MLP is to skip
+arithmetic entirely: a scalar function of one fixed-point input is, in the limit, a
+lookup table, `ROM[x_in] = quantize(f(x_in))`. Like the symbolic unit it is bit-exact
+to the true function's fixed-point image (output-quantization error only) and it is
+*exhaustively* verifiable — the table **is** the specification. A referee is right to
+ask whether this collapse makes the learned symbolic primitive redundant. We built it
+(`mlp/rom_baseline.py`, same golden-model → Icarus → yosys/nextpnr pipeline, same
+stream wrapper) and measured it; the answer is *for exp at this scale, partly — for ln,
+not at all*, and the reason is instructive.
+
+A direct ROM is addressed by the input **code**, so its size is set by the input
+wordlength and the domain, not by the function's complexity:
+
+| function | unit | LCs | EBR | fp max-err | smallest iCE40 |
+|---|---:|---:|---:|---:|---|
+| exp [−2,2] Q8.8 | snapped EML `eml(x,1)` | 316 | 3 | 0.0150 | HX1K |
+| exp [−2,2] Q8.8 | **direct ROM** (2048×16) | 97 | 8 | 0.0149 | HX1K |
+| ln [0.1,10] Q10.12 | snapped EML | 1964 | 13 | 0.00107 | HX8K |
+| ln [0.1,10] Q10.12 | **direct ROM** (65536×22) | — | **512** | 0.00107 | **none** |
+
+For **exp**, the ROM is a genuine competitor and we concede it: 2048 input codes ×
+16 b = 8 EBR + 97 LC (56.5 MHz, bit-exact 256/256), the *same* accuracy as the
+symbolic unit — both are limited by the Q8.8 input resolution, not by their internals
+— at fewer LCs (it trades logic for block RAM). At this scale the snapped-EML exp
+unit's advantage is not area but its exact provenance and the verifiability argument
+of §4; the ROM ties it.
+
+For **ln**, the ROM **collapses**: the 22-bit Q10.12 input over [0.1, 10] needs ~65 536
+entries × 22 b ≈ 1.44 Mbit ≈ **512 block RAMs** — 16× the 32 EBR on an HX8K, infeasible
+on *any* iCE40. The snapped-EML ln unit (1964 LC + 13 EBR, via leading-one range
+reduction `ln(m·2^k)=ln_lut[m]+k·ln2`) fits an HX8K precisely because range reduction
+is the *compression* of that 0.9-Mbit table. The general statement: **the snapped-EML /
+interpolated-LUT unit is a compressed ROM** — exp shrinks a 2048-entry table to a
+257-entry interpolated LUT (~16×); ln shrinks an unrealizable 512-EBR table to 13 EBR.
+For a single narrow-input function the compression can be unnecessary (exp); its value
+appears exactly where the direct table fails — wide input wordlength (ln) and,
+decisively, **multiple inputs**, where a direct ROM grows as the *product* of per-input
+domains while the symbolic datapath does not. The ROM-collapse argument therefore
+bounds the claim rather than refuting it: symbolic ≈ ROM for cheap single-input cases,
+symbolic ≫ ROM as soon as input width or arity grows.
+
 ## 4. Verifiability
 
 The symbolic unit admits an exhaustive correctness statement: over its finite input
@@ -192,7 +242,11 @@ the HX8K path for the on-silicon MLP confirmation.
 ## 6. Threats to validity / scope
 
 - Single-input scalar functions; the conclusion need not extend to higher-arity or
-  multi-output learned blocks where weight sharing amortizes MAC cost.
+  multi-output learned blocks where weight sharing amortizes MAC cost. The single-input
+  case also admits a direct-ROM unit, which **ties** the symbolic exp unit on area and
+  accuracy but is **infeasible for ln** and grows as the product of input domains at
+  higher arity (§3.5) — so the symbolic unit's edge is narrowest in exactly this
+  most-favorable-to-ROM regime, and widens with input width and arity.
 - iCE40 specifically has no hard multipliers; on a DSP-rich FPGA the MLP area gap
   would shrink (though the verifiability and exactness arguments are unchanged).
 - MLPs are small and trained to convergence on a dense grid; larger or differently
@@ -207,7 +261,8 @@ the HX8K path for the on-silicon MLP confirmation.
 python -m mlp.train_mlp           # 8-seed H×depth sweep -> results/mlp/ + train_summary.csv
 python -m mlp.run_mlp             # emit core + stream RTL for every (best-seed) cell
 python -m mlp.sim_check_mlp       # bit-exact 256/256 (Icarus), all cells
-python -m mlp.synth_sweep         # yosys+nextpnr -> results/mlp_pareto.csv (+ _meta.txt)
+python -m mlp.rom_baseline        # direct-ROM spec/error table (sec 3.5)
+python -m mlp.synth_sweep         # yosys+nextpnr -> results/mlp_pareto.csv (+ _meta.txt; incl. ROM rows)
 python -m mlp.make_pareto_figure  # notes/figure_symbolic_vs_mlp.png
 python -m pytest tests/test_mlp_hardware.py -q
 # physical: python -m mlp.board --func exp --h 8 --depth 1

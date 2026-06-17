@@ -155,6 +155,48 @@ def fill_overflow_lower_bounds(rows):
     return rows
 
 
+def synth_rom(func) -> dict:
+    """Direct-ROM baseline row: emit + synth the feasible ROM, or report the
+    block-RAM requirement for the infeasible one (referee hole #3, sec 3.5)."""
+    from hardware.verilog_gen_stream import emit_stream_wrapper
+    from mlp.fixed_point_mlp import FUNC_FMT
+    from mlp import rom_baseline as rb
+
+    fmt = FUNC_FMT[func]
+    spec = rb.rom_spec(func, fmt)
+    er = rb.error_report(func, fmt)
+    name = f"rom_{func}"
+    row = {"unit": name, "func": func, "hidden": 0, "depth": 0,
+           "fmt": repr(fmt).split()[0], "lcs": "", "lc_est": "", "area_source": "",
+           "ebr": spec["n_ebr"], "dsp": 0, "fmax_mhz": "",
+           "fp_maxerr": round(er["fp_maxerr"], 6), "bit_exact": 1}
+
+    if spec["n_ebr"] > 32:        # larger than any iCE40's block RAM -- do not synth
+        row["lcs"] = ""
+        row["area_source"] = "rom-infeasible"
+        return row
+
+    info = rb.emit_rom_verilog(func, fmt, name, RTL_DIR)
+    top = f"{name}_stream"
+    emit_stream_wrapper(name, fmt, info["latency"], RTL_DIR)
+    try:
+        subprocess.run(["yosys", "-q", "-p", f"synth_ice40 -top {top} -json {top}.json",
+                        f"{name}.v", f"{top}.v"], cwd=RTL_DIR, check=True,
+                       capture_output=True, text=True, timeout=YOSYS_TIMEOUT)
+        pnr = subprocess.run(["nextpnr-ice40", *DEVICE, "--json", f"{top}.json", "--freq", "12"],
+                             cwd=RTL_DIR, capture_output=True, text=True, timeout=PNR_TIMEOUT)
+        log = pnr.stdout + pnr.stderr
+        row["lcs"] = _grep_int(r"ICESTORM_LC:\s*(\d+)/", log, default="")
+        row["ebr"] = _grep_int(r"ICESTORM_RAM:\s*(\d+)/", log, default=spec["n_ebr"])
+        row["area_source"] = "pnr"
+        fm = re.search(r"Max frequency for clock '[^']*':\s*([\d.]+)\s*MHz", log)
+        if fm:
+            row["fmax_mhz"] = round(float(fm.group(1)), 1)
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
+        row["area_source"] = "rom-emit-only"
+    return row
+
+
 def _tool_versions() -> str:
     import platform
     lines = [f"host: {platform.node()} ({platform.platform()})"]
@@ -195,6 +237,11 @@ def main():
                       f"fp_maxerr {row['fp_maxerr']}")
 
     fill_overflow_lower_bounds(rows)
+    for func in funcs:                       # direct-ROM baseline (sec 3.5)
+        try:
+            rows.append(synth_rom(func))
+        except Exception as e:               # noqa: BLE001 - ROM row is best-effort
+            print(f"rom_{func}: skipped ({e})")
     rows.extend(SYMBOLIC_REF)
     os.makedirs(os.path.dirname(OUT_CSV), exist_ok=True)
     with open(OUT_CSV, "w", newline="") as f:

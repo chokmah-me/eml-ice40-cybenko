@@ -15,5 +15,7 @@ mlp_ln_h4_d2,ln,4,2,Q10.12,7281,,pnr,0,0,,0.28403,1
 mlp_ln_h8_d2,ln,8,2,Q10.12,23319,,pnr,0,0,,0.150974,1
 mlp_ln_h16_d2,ln,16,2,Q10.12,23319,23319,overflow-lb,,,,0.065769,1
 mlp_ln_h32_d2,ln,32,2,Q10.12,23319,23319,overflow-lb,,,,0.026462,1
+rom_exp,exp,0,0,Q8.8,97,,pnr,8,0,56.5,0.014918,1
+rom_ln,ln,0,0,Q10.12,,,rom-infeasible,512,0,,0.001071,1
 symbolic_exp,exp,0,0,Q8.8,316,316,hardware.md,3,0,28.3,0.014979,1
 symbolic_ln,ln,0,0,Q10.12,1964,1964,hardware.md,13,0,16.7,0.001071,1

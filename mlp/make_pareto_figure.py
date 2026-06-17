@@ -74,6 +74,23 @@ def main():
                         (int(r["lcs"]), float(r["fp_maxerr"])),
                         fontsize=8, color="crimson", xytext=(8, -4),
                         textcoords="offset points")
+        # Direct-ROM baseline (sec 3.5): cost is in EBR, not LCs, so annotate EBR.
+        # A feasible ROM is a green diamond at its LC; an EBR-infeasible ROM cannot
+        # be honestly placed on an LC axis, so it is a banner note instead.
+        rom = [r for r in rows if r["func"] == func and r["unit"].startswith("rom_")]
+        for r in rom:
+            err = float(r["fp_maxerr"])
+            if r.get("area_source") == "rom-infeasible":
+                ax.annotate(f"direct ROM: {r['ebr']} EBR — infeasible\n(no iCE40 has >32)",
+                            (ax.get_xlim()[1], err), fontsize=7.5, color="green",
+                            ha="right", va="bottom", xytext=(-4, 2),
+                            textcoords="offset points")
+            else:
+                ax.scatter([int(r["lcs"])], [err], marker="D", s=70, color="green",
+                           zorder=5, edgecolor="k", label="direct ROM (bit-exact)")
+                ax.annotate(f"direct ROM ({r['ebr']} EBR)", (int(r["lcs"]), err),
+                            fontsize=7.5, color="green", xytext=(6, 9),
+                            textcoords="offset points")
         for lim, lbl in ((1280, "HX1K"), (5280, "UP5K"), (7680, "HX8K")):
             ax.axvline(lim, color="gray", ls=":", lw=0.8, alpha=0.6)
             ax.text(lim, ax.get_ylim()[1], lbl, fontsize=6, color="gray",

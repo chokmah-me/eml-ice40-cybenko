@@ -13,3 +13,4 @@ area_source values:
   overflow-lb = synth did not finish in 3600s; lower bound = largest measured
                 same-function cell (these cells lose on accuracy anyway)
   hardware.md = snapped-EML reference from the stage-5 stream table
+  rom-infeasible = direct ROM needs >32 EBR (no iCE40 fits); cost is block RAM, not LCs

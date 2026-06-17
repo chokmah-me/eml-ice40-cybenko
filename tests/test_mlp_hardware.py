@@ -110,6 +110,14 @@ class TestTrainedCells:
             r = error_report(func, h, d)
             assert r["fp_maxerr"] < r["float_maxerr"] + 0.05
 
+    def test_direct_rom_ties_exp_but_infeasible_for_ln(self):
+        # sec 3.5: the direct ROM matches each function's Q-format accuracy floor
+        # (so ~= the symbolic unit), but exp fits a few EBR while ln needs >32.
+        from mlp.rom_baseline import error_report as rom_err
+        rexp, rln = rom_err("exp"), rom_err("ln")
+        assert rexp["fp_maxerr"] < 0.02 and rexp["feasible_hx8k"]      # exp ROM fits
+        assert rln["n_ebr"] > 32 and not rln["feasible_hx8k"]          # ln ROM does not
+
     def test_symbolic_dominates_every_mlp(self):
         # Joint Pareto dominance: across the full best-of-8 sweep, no MLP cell is
         # more accurate than the snapped-EML unit of the same function -- so symbolic
