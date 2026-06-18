@@ -1,39 +1,51 @@
 {
-  "title": "eml-ice40-cybenko: code and data for Valid and False Snapping in EML Expression Trees",
-  "description": "Code (eml_layer_v2.py, experiment_v2.py, basin_warmstart.py), paper source, and data for 'Valid and False Snapping in EML Expression Trees: The Basin Selection Problem'. v2.4 adds the warm-start/curriculum basin-selection note (notes/basin_selection_warmstart_note.md) with the canonical 120-row post-fix dataset (results/basin_warmstart_v2.4_postfix.csv, 20 seeds x {ln d=5, exp d=3} x {blind, warm, curriculum}): warm-start recovery 100% for exp d=3 and ln d=5, blind 25-35%, with auditable pretrain_form column and deterministic seeding. v2.5 makes ln over-depth curriculum a real curriculum via top-aligned grow_from_shallow (ln d=5 curriculum 20/20, results/basin_warmstart_v2.5_unbalanced.csv + addendum note) and adds pip-installable packaging with examples. v2.6 adds Track C hardware realization (hardware/ package): valid snapped forms from the released CSVs compile to fixed-point iCE40 FPGA RTL (combinational, pipelined EBR-based, and byte-streaming variants) with a bit-exact integer reference model, Icarus-verified bit-equality (6/6 designs), a 50-test suite, and measured UP5K synthesis numbers with valid bitstreams (ln d=4: 1964 LCs / 13 EBR / 16.7 MHz; exp d=2: 316 LCs / 3 EBR / 28.3 MHz). Includes the original 240-run v2.2 sweep CSV, the pre-fix v2.3 diagnostic corpus, and all figures. v2.7 is the Zenodo publication release: paper v2.3 (DOI 10.5281/zenodo.20671038) and the warm-start/curriculum technical note v1.0 (DOI 10.5281/zenodo.20671272) published, figure 3 regenerated from the canonical dataset, metadata corrected. v2.8 adds a physical Lattice iCEstick (iCE40-HX1K) board demo of the exp d=2 core over a UART bridge: the host streams the 256-point sweep and the board returns bit-exact codes (256/256) matching the Python fixed-point model, with build/flash tooling, UART bring-up diagnostics, and a host-side checker.",
-  "upload_type": "software",
-  "access_right": "open",
-  "license": "MIT",
-  "version": "2.8.0",
-  "publication_date": "2026-06-16",
+  "title": "EML Expression Trees: Symbolic Regression, Basin Selection, and Hardware Realization on iCE40",
+  "description": "Code, data, and technical notes for EML (exp-minus-ln) expression tree research. Includes symbolic regression experiments (snapping_v2_final.csv), basin-selection warm-start studies, and Track C hardware realization: fixed-point golden models, iCE40 RTL emitters, quantized-MLP and direct-ROM baselines, 2-input arity experiment, synthesis sweeps, and on-silicon confirmation on iCEstick.",
   "creators": [
     {
       "name": "Bilar, Daniyel Yaacov",
-      "affiliation": "Chokmah LLC"
+      "affiliation": "Chokmah LLC",
+      "orcid": "0000-0002-9040-6914"
     }
   ],
   "keywords": [
     "symbolic regression",
-    "EML operator",
-    "neural symbolic",
-    "expression trees",
-    "basin selection",
-    "temperature annealing",
-    "elementary functions",
+    "EML expression trees",
     "FPGA",
     "iCE40",
-    "fixed-point arithmetic"
+    "fixed-point arithmetic",
+    "verifiable hardware",
+    "edge inference",
+    "basin selection",
+    "Odrzywolek"
   ],
+  "license": "MIT",
+  "upload_type": "software",
+  "access_right": "open",
   "related_identifiers": [
     {
-      "identifier": "10.5281/zenodo.19736173",
       "relation": "isSupplementTo",
-      "resource_type": "publication-preprint"
+      "identifier": "10.5281/zenodo.20671038",
+      "resource_type": "publication-preprint",
+      "scheme": "doi"
     },
     {
-      "identifier": "10.5281/zenodo.20671271",
       "relation": "isSupplementTo",
-      "resource_type": "publication-preprint"
+      "identifier": "10.5281/zenodo.20671272",
+      "resource_type": "publication-preprint",
+      "scheme": "doi"
+    },
+    {
+      "relation": "isSupplementTo",
+      "identifier": "10.5281/zenodo.20745607",
+      "resource_type": "publication-preprint",
+      "scheme": "doi"
+    },
+    {
+      "relation": "cites",
+      "identifier": "2603.21852",
+      "resource_type": "publication-preprint",
+      "scheme": "arxiv"
     }
   ]
 }

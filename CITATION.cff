@@ -1,42 +1,41 @@
 cff-version: 1.2.0
-message: "If you use this software or data, please cite it as below."
+message: "If you use this software, please cite it as below."
 authors:
   - family-names: Bilar
     given-names: Daniyel Yaacov
     affiliation: Chokmah LLC
     email: chokmah-dyb@pm.me
-title: "Valid and False Snapping in EML Expression Trees: The Basin Selection Problem"
-version: "2.8.0"
-date-released: "2026-06-16"
+    orcid: "https://orcid.org/0000-0002-9040-6914"
+title: "EML Expression Trees: Symbolic Regression, Basin Selection, and Hardware Realization on iCE40"
+version: "3.0.0"
+date-released: "2026-06-19"
 url: "https://github.com/chokmah-me/eml-ice40-cybenko"
-identifiers:
-  - type: doi
-    value: "10.5281/zenodo.19736173"
-    description: "Paper (concept DOI, resolves to latest version; v2.3 is 10.5281/zenodo.20671038)"
-  - type: doi
-    value: "10.5281/zenodo.20671271"
-    description: "Technical note (concept DOI, resolves to latest version; v1.0 is 10.5281/zenodo.20671272)"
-  - type: doi
-    value: "10.17605/OSF.IO/648UM"
-    description: "Paper (OSF mirror, https://osf.io/648um/)"
-  - type: doi
-    value: "10.17605/OSF.IO/DWS85"
-    description: "Technical note (OSF mirror, https://osf.io/dws85/)"
 license: MIT
-notes: "Code is MIT-licensed; the paper and figures are released under CC BY 4.0 (see the Zenodo record metadata)."
-keywords:
-  - symbolic regression
-  - expression trees
-  - EML operator
-  - basin selection
-  - FPGA
-  - iCE40
 references:
   - type: article
+    title: "Valid and False Snapping in EML Expression Trees: The Basin Selection Problem"
     authors:
-      - family-names: Odrzywolek
-        given-names: Andrzej
-    title: "All elementary functions from a single binary operator"
+      - family-names: Bilar
+        given-names: Daniyel Yaacov
     year: 2026
-    url: "https://arxiv.org/abs/2603.21852"
-    notes: "Foundational EML operator and bootstrapping construction. Supplementary Information cited for warm-start evidence (Table S7) and impostor example (Sect. 1.2)."
+    identifiers:
+      - type: doi
+        value: "10.5281/zenodo.20671038"
+  - type: article
+    title: "Basin Selection in EML Expression Trees: Targeted Warm-Start and Top-Aligned Curriculum"
+    authors:
+      - family-names: Bilar
+        given-names: Daniyel Yaacov
+    year: 2026
+    identifiers:
+      - type: doi
+        value: "10.5281/zenodo.20671272"
+  - type: article
+    title: "Compressed by Discovery: Snapped Symbolic-Regression Primitives as Realizable, Verifiable Function Units on DSP-less FPGAs"
+    authors:
+      - family-names: Bilar
+        given-names: Daniyel Yaacov
+    year: 2026
+    identifiers:
+      - type: doi
+        value: "10.5281/zenodo.20745607"
