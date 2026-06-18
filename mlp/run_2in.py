@@ -29,6 +29,7 @@ from mlp.symbolic_2in import (DEFAULT_FMT, emit_symbolic_2in_verilog,
 HERE = os.path.dirname(os.path.abspath(__file__))
 RTL_DIR = os.path.join(os.path.dirname(HERE), "hardware", "rtl")
 DEVICE = ("--up5k", "--package", "sg48")
+PNR_SEED = ("--seed", "1")          # pin nextpnr placement for reproducible LC/Fmax
 CORE = "symbolic_exp_ln_2in"
 
 
@@ -147,7 +148,8 @@ def synth(fmt=DEFAULT_FMT) -> dict:
     subprocess.run(["yosys", "-q", "-p", f"synth_ice40 -top {top} -json {top}.json; stat",
                     f"{CORE}.v", f"{top}.v"], cwd=RTL_DIR, check=True,
                    capture_output=True, text=True, timeout=3600)
-    pnr = subprocess.run(["nextpnr-ice40", *DEVICE, "--json", f"{top}.json", "--freq", "12"],
+    pnr = subprocess.run(["nextpnr-ice40", *DEVICE, *PNR_SEED, "--json", f"{top}.json",
+                          "--freq", "12"],
                          cwd=RTL_DIR, capture_output=True, text=True, timeout=600)
     log = pnr.stdout + pnr.stderr
     lcs = _grep_int(r"ICESTORM_LC:\s*(\d+)/", log, default=None)
@@ -260,7 +262,7 @@ def run_mlp_2in(hidden, depth, fmt=DEFAULT_FMT, do_synth=True):
                         f"synth_ice40 -top {top} -json {top}.json; stat",
                         f"{name}.v", f"{top}.v"], cwd=RTL_DIR, check=True,
                        capture_output=True, text=True, timeout=3600)
-        pnr = subprocess.run(["nextpnr-ice40", *DEVICE, "--json", f"{top}.json",
+        pnr = subprocess.run(["nextpnr-ice40", *DEVICE, *PNR_SEED, "--json", f"{top}.json",
                               "--freq", "12"], cwd=RTL_DIR, capture_output=True,
                              text=True, timeout=600)
         log = pnr.stdout + pnr.stderr

@@ -134,12 +134,12 @@ The direct ROM for the same function is addressed by *both* input codes, `ROM[{x
 
 The pattern is the whole argument. At every ROM resolution that *fits* an iCE40 (`W_in` ≤ 6, ≤ 32 EBR) the table is **≥ 32× less accurate** than the symbolic unit (0.80 vs 0.025); the ROM first matches symbolic accuracy at `W_in` = 8, where it needs **256 EBR — 8× the 32 on an HX8K, infeasible on any iCE40**. The product blows up before the accuracy arrives. The symbolic unit, by contrast, pays for the second input *additively*: its storage is the sum of the two legs (514 entries) and does not move with `W_in` at all. This is the single-input ROM-collapse of §4.3 reproduced one dimension up, and it sharpens with each further input — `k` inputs cost the symbolic datapath `O(Σ legs)` and the direct ROM `O(Π domains)`.
 
-The synthesized three-corner picture confirms it. All three units pass through the same byte-serial stream wrapper (19 pins) and yosys `synth_ice40` → nextpnr-ice40 UP5K sg48 flow, each bit-exact 256/256 in Icarus against its golden model (`mlp/run_2in.py`, `results/mlp_pareto_2in.csv`):
+The synthesized three-corner picture confirms it. All three units pass through the same byte-serial stream wrapper (19 pins) and yosys `synth_ice40` → nextpnr-ice40 UP5K sg48 flow (placement pinned with `--seed 1` for reproducible LC/Fmax), each bit-exact 256/256 in Icarus against its golden model (`mlp/run_2in.py`, `results/mlp_pareto_2in.csv`):
 
 | unit | LCs | EBR | Fmax (MHz) | fp max-err | smallest iCE40 |
 |---|---:|---:|---:|---:|---|
-| **symbolic `exp(x) − ln(y)`** | **969** | 0 | 12.7 | **0.0248** | HX1K |
-| MLP 2→8→1 (Q8.8 PTQ) | 3 536 | 0 | 14.2 | 0.880 | UP5K |
+| **symbolic `exp(x) − ln(y)`** | **969** | 0 | 12.9 | **0.0248** | HX1K |
+| MLP 2→8→1 (Q8.8 PTQ) | 3 536 | 0 | 13.7 | 0.880 | UP5K |
 | MLP 2→16→1 (Q8.8 PTQ) | 6 497 | 0 | — | 0.394 | HX8K (overflows UP5K) |
 
 The 2-input symbolic unit fits the smallest iCE40 (969/1280 LC on an HX1K) at 0.025 max-error; the 2→8→1 MLP is 3.6× the logic and **35× less accurate**, and the 2→16→1 MLP already overflows the UP5K while still **16× worse** on accuracy. So the single-input dominance result (§4.2) and the ROM-collapse result (§4.3) both survive the step up in arity: against the *learned* baseline the symbolic unit wins on area and accuracy at once, and against the *tabulated* baseline its cost grows additively where the ROM's grows multiplicatively. (The ROM EBR/accuracy rows are synthesis-free — set by the address width — and final; the LC/Fmax rows are placed measurements.)
