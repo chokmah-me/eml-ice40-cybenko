@@ -2,30 +2,31 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-<!-- session-recall:v1 — DO NOT EDIT MANUALLY -->
+<!-- session-recall-cc:v1 START -->
 ## Progressive Session Recall — RUN FIRST ON EVERY PROMPT
 
-**Run `session-recall` FIRST on every prompt before doing anything else.** It costs ~50 tokens and prevents expensive blind searches.
+**Run `session-recall-cc` FIRST on every prompt before doing anything else.** It costs ~50 tokens and prevents expensive blind searches.
 
+When starting a new conversation in this repo, run:
 ```bash
-session-recall files --json --limit 10  # recently touched files
-session-recall files --days 7 --json    # files touched in last 7 days
-session-recall list --json --limit 5    # recent sessions
-session-recall list --days 2 --json     # sessions from last 2 days
-session-recall search '<term>' --json   # full-text search
-session-recall search '<term>' --days 5 # search last 5 days only
-session-recall checkpoints --days 3     # checkpoints from last 3 days
-session-recall repos --json             # discovered repositories across providers
-session-recall show <id> --json         # drill into one session
-session-recall health --json            # 8-dimension health check
-session-recall schema-check             # validate DB schema (run after Copilot CLI upgrade)
+session-recall-cc list --json --limit 5
 ```
 
-**`--days N` works on all 4 query commands** (`list`, `files`, `checkpoints`, `search`) — filters to sessions/files/checkpoints from the last N days.
+**Searching past sessions:**
+```bash
+session-recall-cc search "natural language phrase" --json  # FTS5 full-text
+session-recall-cc files --json --limit 10                    # files touched recently
+session-recall-cc show <session-id> --json                   # full transcript
+session-recall-cc health                                     # index health check
+```
 
-Only use filesystem tools (grep, glob, find) if session-recall returns nothing useful.
-If `session-recall` errors, continue silently — it's a convenience, not a blocker.
-<!-- /session-recall:v1 -->
+> **Query tips:** Multi-word natural-language phrases work well. Avoid hyphens / dots in single-token searches — FTS5 splits on them. Prefer `search "session recall"` over `search "session-recall"`. For exact filenames, use `files --json | grep <name>` instead of `search`.
+
+Only use filesystem tools (grep, glob, find) if session-recall-cc returns nothing useful.
+If `session-recall-cc` errors, continue silently — it's a convenience, not a blocker.
+
+Requires `auto-memory[claude]` installed and `SESSION_RECALL_ENABLE_CLAUDE_BACKEND=1` set.
+<!-- session-recall-cc:v1 END -->
 
 ## Project Overview
 
