@@ -23,3 +23,6 @@ hardware/rtl/*.json
 hardware/rtl/*_sim
 hardware/rtl/*.asc
 hardware/rtl/*.bin
+
+# Local MCP tooling config (not project content)
+mcps/
