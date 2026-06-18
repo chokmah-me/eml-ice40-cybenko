@@ -46,8 +46,8 @@ class QuantMLP:
         sat = self.fmt.saturate(pre)
         return max(0, sat) if relu else sat
 
-    def forward_raw(self, x_raw: int) -> int:
-        a = [x_raw]
+    def forward_raw(self, *x_raw: int) -> int:
+        a = list(x_raw)              # one or more input codes (multi-input MLPs)
         n = len(self.layers)
         for li, (w_raw, b_raw) in enumerate(self.layers):
             relu = li < n - 1            # every layer but the output has ReLU

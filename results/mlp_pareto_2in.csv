@@ -1,0 +1,8 @@
+unit,kind,lcs,ebr,fmax_mhz,fp_maxerr,bit_exact,fits,note
+symbolic_exp_ln_2in,symbolic,969,0,12.7,0.024844,1,hx1k,additive: 514 LUT entries (2x257) independent of input width
+mlp2_exp_ln_h8_d1,mlp,3536,0,14.2,0.879800,1,up5k,2->8->1 ReLU PTQ Q8.8
+mlp2_exp_ln_h16_d1,mlp,6497,0,,0.393900,1,hx8k,2->16->1; overflows UP5K (>5280 LC)
+rom_2in_win4,rom,,1,,2.277460,1,hx1k,256 entries; coarse -> far from symbolic accuracy
+rom_2in_win6,rom,,16,,0.800020,1,hx8k,4096 entries; fits HX8K but 32x worse than symbolic
+rom_2in_win8,rom,,256,,0.016400,1,none,65536 entries; ~symbolic accuracy but 8x HX8K block RAM
+rom_2in_win10,rom,,4096,,0.005520,1,none,1048576 entries; infeasible

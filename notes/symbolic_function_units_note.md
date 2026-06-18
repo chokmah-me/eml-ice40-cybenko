@@ -132,7 +132,17 @@ The direct ROM for the same function is addressed by *both* input codes, `ROM[{x
 | direct ROM, `W_in` = 8/input | 65 536 | 256 | 0.0164 | **no** (8× HX8K) |
 | direct ROM, `W_in` = 10/input | 1 048 576 | 4 096 | 0.0055 | no |
 
-The pattern is the whole argument. At every ROM resolution that *fits* an iCE40 (`W_in` ≤ 6, ≤ 32 EBR) the table is **≥ 32× less accurate** than the symbolic unit (0.80 vs 0.025); the ROM first matches symbolic accuracy at `W_in` = 8, where it needs **256 EBR — 8× the 32 on an HX8K, infeasible on any iCE40**. The product blows up before the accuracy arrives. The symbolic unit, by contrast, pays for the second input *additively*: its storage is the sum of the two legs (514 entries) and does not move with `W_in` at all. This is the single-input ROM-collapse of §4.3 reproduced one dimension up, and it sharpens with each further input — `k` inputs cost the symbolic datapath `O(Σ legs)` and the direct ROM `O(Π domains)`. (Logic-cell area and Fmax for the symbolic 2-input core, and a trained 2-input MLP baseline, are pending the synthesis sweep; the entry counts, EBR, and accuracy above are synthesis-free and final.)
+The pattern is the whole argument. At every ROM resolution that *fits* an iCE40 (`W_in` ≤ 6, ≤ 32 EBR) the table is **≥ 32× less accurate** than the symbolic unit (0.80 vs 0.025); the ROM first matches symbolic accuracy at `W_in` = 8, where it needs **256 EBR — 8× the 32 on an HX8K, infeasible on any iCE40**. The product blows up before the accuracy arrives. The symbolic unit, by contrast, pays for the second input *additively*: its storage is the sum of the two legs (514 entries) and does not move with `W_in` at all. This is the single-input ROM-collapse of §4.3 reproduced one dimension up, and it sharpens with each further input — `k` inputs cost the symbolic datapath `O(Σ legs)` and the direct ROM `O(Π domains)`.
+
+The synthesized three-corner picture confirms it. All three units pass through the same byte-serial stream wrapper (19 pins) and yosys `synth_ice40` → nextpnr-ice40 UP5K sg48 flow, each bit-exact 256/256 in Icarus against its golden model (`mlp/run_2in.py`, `results/mlp_pareto_2in.csv`):
+
+| unit | LCs | EBR | Fmax (MHz) | fp max-err | smallest iCE40 |
+|---|---:|---:|---:|---:|---|
+| **symbolic `exp(x) − ln(y)`** | **969** | 0 | 12.7 | **0.0248** | HX1K |
+| MLP 2→8→1 (Q8.8 PTQ) | 3 536 | 0 | 14.2 | 0.880 | UP5K |
+| MLP 2→16→1 (Q8.8 PTQ) | 6 497 | 0 | — | 0.394 | HX8K (overflows UP5K) |
+
+The 2-input symbolic unit fits the smallest iCE40 (969/1280 LC on an HX1K) at 0.025 max-error; the 2→8→1 MLP is 3.6× the logic and **35× less accurate**, and the 2→16→1 MLP already overflows the UP5K while still **16× worse** on accuracy. So the single-input dominance result (§4.2) and the ROM-collapse result (§4.3) both survive the step up in arity: against the *learned* baseline the symbolic unit wins on area and accuracy at once, and against the *tabulated* baseline its cost grows additively where the ROM's grows multiplicatively. (The ROM EBR/accuracy rows are synthesis-free — set by the address width — and final; the LC/Fmax rows are placed measurements.)
 
 ### 4.5 On silicon — and a hard realizability gap
 
@@ -160,7 +170,7 @@ The consequence: on DSP-less fabric the symbolic unit is the only option that is
 
 ## 7. Threats to validity / scope
 
-- **Mostly single-input scalar functions.** The headline area–accuracy frontier rests on the two single-input designs exp and ln — the regime most favorable to the ROM (which ties exp). §4.4 takes one step up in arity and measures the 2-input EML gate, confirming the symbolic unit's storage is additive while the ROM's is multiplicative; the *placed area* of the 2-input symbolic core and a trained 2-input MLP baseline remain pending the synthesis sweep, and higher arities (k > 2) are extrapolated from the `O(Σ)` vs `O(Π)` scaling rather than measured.
+- **Low arity: one 2-input design measured, higher arity extrapolated.** The headline area–accuracy frontier rests on the two single-input designs exp and ln — the regime most favorable to the ROM (which ties exp). §4.4 takes one step up in arity and measures the 2-input EML gate end-to-end (placed area, Fmax, bit-exact sim), confirming the symbolic unit beats both the learned and tabulated baselines at arity 2 and that its cost is additive while the ROM's is multiplicative. Higher arities (k > 2) are extrapolated from the `O(Σ)` vs `O(Π)` scaling rather than measured, and all designs remain elementwise (no weight sharing across a vector input, where an MLP would amortize MAC cost).
 - **iCE40 specifically has no hard multipliers.** On a DSP-rich FPGA the MLP area gap would shrink (the verifiability and exactness arguments are unchanged).
 - **MLPs are post-training quantized, not QAT-trained.** As argued in §3, this is not the limiting factor — the float ceiling already lies above the symbolic accuracy — but we report PTQ numbers rather than a QAT sweep.
 - **MLPs are small and trained to convergence on a dense grid.** Larger or differently regularized networks could shift the frontier but not cross the symbolic point at the accuracies observed here.
@@ -199,6 +209,7 @@ python -m mlp.run_mlp             # emit core + stream RTL for every (best-seed)
 python -m mlp.sim_check_mlp       # bit-exact 256/256 (Icarus), all cells
 python -m mlp.rom_baseline        # direct-ROM spec/error table, 1-D (§4.3) + 2-D arity sweep (§4.4)
 python -m mlp.symbolic_2in        # 2-input symbolic unit exp(x)-ln(y): error report + RTL (§4.4)
+python -m mlp.run_2in --mlp       # synth half: bit-exact + placed area, symbolic + MLP (§4.4)
 python -m mlp.synth_sweep         # yosys+nextpnr -> results/mlp_pareto.csv (+ _meta.txt; incl. ROM rows)
 python -m mlp.make_pareto_figure  # notes/figure_symbolic_vs_mlp.png
 python -m pytest tests/test_mlp_hardware.py -q

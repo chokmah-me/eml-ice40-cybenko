@@ -19,7 +19,12 @@ from hardware.fixed_point import FixedPointFormat
 from mlp.fixed_point_mlp import QuantMLP
 
 
-def emit_verilog_mlp(qm: QuantMLP, name: str, out_dir: str) -> dict:
+def emit_verilog_mlp(qm: QuantMLP, name: str, out_dir: str,
+                     inputs=("x_in",), emit_tb=True) -> dict:
+    """Emit a pipelined MLP core. `inputs` names the layer-0 fan-in ports (one for
+    a scalar MLP, two for the arity experiment's 2-input baseline); the per-neuron
+    MAC already sums over the full fan-in. When emit_tb is False the caller supplies
+    its own testbench (the 1-input sweep tb does not fit a multi-input core)."""
     fmt = qm.fmt
     W, F = fmt.total_bits, fmt.frac_bits
     ACC = 2 * W + 8                       # wide enough: no overflow before requant
@@ -30,7 +35,7 @@ def emit_verilog_mlp(qm: QuantMLP, name: str, out_dir: str) -> dict:
     latency = n_layers
 
     body = []
-    prev = ["x_in"]                        # layer 0 fans in from the single input
+    prev = list(inputs)                    # layer 0 fans in from these input ports
     for li, (w_raw, b_raw) in enumerate(qm.layers):
         relu = li < n_layers - 1
         nout = len(b_raw)
@@ -77,8 +82,8 @@ def emit_verilog_mlp(qm: QuantMLP, name: str, out_dir: str) -> dict:
 
 module {name} (
     input clk,
-    input  signed [{W-1}:0] x_in,    // Q{fmt.int_bits}.{F}, one sample per clock
-    output signed [{W-1}:0] y_out    // valid LATENCY cycles after its x_in
+{chr(10).join(f"    input  signed [{W-1}:0] {p}," for p in inputs)}
+    output signed [{W-1}:0] y_out    // valid LATENCY cycles after its inputs
 );
     localparam LATENCY = {latency};
 
@@ -119,10 +124,12 @@ endmodule
 """
 
     rtl_path = os.path.join(out_dir, f"{name}.v")
-    tb_path = os.path.join(out_dir, f"{name}_tb.v")
     with open(rtl_path, "w") as f:
         f.write(rtl)
-    with open(tb_path, "w") as f:
-        f.write(tb)
+    tb_path = None
+    if emit_tb:
+        tb_path = os.path.join(out_dir, f"{name}_tb.v")
+        with open(tb_path, "w") as f:
+            f.write(tb)
     return {"rtl": rtl_path, "tb": tb_path, "name": name,
             "latency": latency, "n_layers": n_layers}
