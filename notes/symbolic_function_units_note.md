@@ -116,7 +116,25 @@ For **exp**, the ROM is a genuine competitor and we concede it: 2048 input codes
 
 For **ln**, the ROM **collapses**: the 22-bit Q10.12 input over [0.1, 10] needs ≈65 536 entries × 22 b ≈ 1.44 Mbit ≈ 512 block RAMs — 16× the 32 EBR on an HX8K, infeasible on any iCE40. The snapped-EML ln unit fits an HX8K precisely because leading-one range reduction is the *compression* of that table. The general statement: **the snapped-EML / interpolated-LUT unit is a compressed ROM** — exp shrinks a 2048-entry table to a 257-entry interpolated LUT (~16×); ln shrinks an unrealizable 512-EBR table to 13 EBR. For one narrow-input function the compression can be unnecessary (exp); its value appears exactly where the direct table fails — wide input wordlength (ln) and, decisively, **multiple inputs**, where a direct ROM grows as the *product* of per-input domains while the symbolic datapath does not. The ROM-collapse argument therefore bounds the claim rather than refuting it: symbolic ≈ ROM for cheap single-input cases, symbolic ≫ ROM as soon as input width or arity grows.
 
-### 4.4 On silicon — and a hard realizability gap
+### 4.4 Arity: the ROM grows as a product, the symbolic unit as a sum
+
+§4.3 ends on an assertion — that the symbolic unit's edge over the direct ROM *widens with arity* — and the single-input designs cannot prove it, because a one-input ROM is precisely the regime most favorable to tabulation (it ties exp). We therefore measure the claim directly on the smallest non-trivial multi-input case: the two-argument EML operator itself, `f(x, y) = exp(x) − ln(y)`.
+
+This needs no new symbolic-regression run. A depth-1 EML tree that routes both external inputs — `x` to the exp leg, `y` to the ln leg — computes exactly `exp(x) − ln(y)` after snapping, with no soft mixing left. The "2-input symbolic unit" is thus the raw gate, and its datapath is just the two already-verified single-input legs (the 257-entry interpolated exp LUT and the range-reduced ln) plus one saturating subtract. Its golden model is `hardware/fixed_point.py::FixedEML.eml_fix`; over a 129×129 grid on the same domains (x ∈ [−2, 2], y ∈ [0.1, 10]) at a unified Q8.8 it has fp max-error **0.0248** and stores **514 table entries (2 × 257), independent of the input wordlength** (`mlp/symbolic_2in.py`).
+
+The direct ROM for the same function is addressed by *both* input codes, `ROM[{x_code, y_code}]`, so its entry count is the **product** `2^(W_x + W_y)`. Sweeping a common per-input wordlength `W_in` (`mlp/rom_baseline.py`, Q8.8 output) makes the contrast quantitative:
+
+| unit | entries | EBR | fp max-err | fits iCE40? |
+|---|---:|---:|---:|---|
+| **symbolic `exp(x) − ln(y)`** | **514** (2×257, flat in `W_in`) | — | **0.0248** | yes |
+| direct ROM, `W_in` = 4/input | 256 | 1 | 2.277 | yes |
+| direct ROM, `W_in` = 6/input | 4 096 | 16 | 0.800 | yes (HX8K) |
+| direct ROM, `W_in` = 8/input | 65 536 | 256 | 0.0164 | **no** (8× HX8K) |
+| direct ROM, `W_in` = 10/input | 1 048 576 | 4 096 | 0.0055 | no |
+
+The pattern is the whole argument. At every ROM resolution that *fits* an iCE40 (`W_in` ≤ 6, ≤ 32 EBR) the table is **≥ 32× less accurate** than the symbolic unit (0.80 vs 0.025); the ROM first matches symbolic accuracy at `W_in` = 8, where it needs **256 EBR — 8× the 32 on an HX8K, infeasible on any iCE40**. The product blows up before the accuracy arrives. The symbolic unit, by contrast, pays for the second input *additively*: its storage is the sum of the two legs (514 entries) and does not move with `W_in` at all. This is the single-input ROM-collapse of §4.3 reproduced one dimension up, and it sharpens with each further input — `k` inputs cost the symbolic datapath `O(Σ legs)` and the direct ROM `O(Π domains)`. (Logic-cell area and Fmax for the symbolic 2-input core, and a trained 2-input MLP baseline, are pending the synthesis sweep; the entry counts, EBR, and accuracy above are synthesis-free and final.)
+
+### 4.5 On silicon — and a hard realizability gap
 
 The symbolic exp unit runs on a physical iCEstick (HX1K), 256/256 bit-exact (`hardware/host_demo.py`), at 530 LCs (41% of the 1280-LC device).
 
@@ -126,7 +144,7 @@ We attempted the same on-silicon confirmation for the MLP baseline. The machiner
 
 ## 5. Verifiability
 
-The symbolic unit admits an exhaustive correctness statement: over its finite input domain (256 codes on the demo sweep, or the full Q-format domain in `tests/test_hardware.py`), every output equals the fixed-point image of the true function within a stated bound, and the RTL equals that model bit-for-bit. There is no training-noise term. The direct ROM shares this property — the table is the specification. The MLP inherits the same *RTL == model* guarantee (also 256/256), but "model == intended function" holds only to the trained approximation error — a qualitatively weaker claim for safety- or certification-sensitive use. This places the symbolic unit and the ROM in one verifiability class and the MLP in another; among the verifiable units, the symbolic one is the realizable one as soon as input width or arity grows (§4.3).
+The symbolic unit admits an exhaustive correctness statement: over its finite input domain (256 codes on the demo sweep, or the full Q-format domain in `tests/test_hardware.py`), every output equals the fixed-point image of the true function within a stated bound, and the RTL equals that model bit-for-bit. There is no training-noise term. The direct ROM shares this property — the table is the specification. The MLP inherits the same *RTL == model* guarantee (also 256/256), but "model == intended function" holds only to the trained approximation error — a qualitatively weaker claim for safety- or certification-sensitive use. This places the symbolic unit and the ROM in one verifiability class and the MLP in another; among the verifiable units, the symbolic one is the realizable one as soon as input width or arity grows (§4.3, §4.4).
 
 ---
 
@@ -142,7 +160,7 @@ The consequence: on DSP-less fabric the symbolic unit is the only option that is
 
 ## 7. Threats to validity / scope
 
-- **Single-input scalar functions; n = 2 designs.** The generality claim rests on exp and ln. The single-input case is also the most favorable to the ROM (which ties exp), so the symbolic edge is observed at its narrowest here; the arity argument (§4.3) is reasoned, not yet measured. A 2-input symbolic unit vs. its 2-input ROM and a 2-input MLP is the single experiment that would turn the arity claim into data, and is the natural next step.
+- **Mostly single-input scalar functions.** The headline area–accuracy frontier rests on the two single-input designs exp and ln — the regime most favorable to the ROM (which ties exp). §4.4 takes one step up in arity and measures the 2-input EML gate, confirming the symbolic unit's storage is additive while the ROM's is multiplicative; the *placed area* of the 2-input symbolic core and a trained 2-input MLP baseline remain pending the synthesis sweep, and higher arities (k > 2) are extrapolated from the `O(Σ)` vs `O(Π)` scaling rather than measured.
 - **iCE40 specifically has no hard multipliers.** On a DSP-rich FPGA the MLP area gap would shrink (the verifiability and exactness arguments are unchanged).
 - **MLPs are post-training quantized, not QAT-trained.** As argued in §3, this is not the limiting factor — the float ceiling already lies above the symbolic accuracy — but we report PTQ numbers rather than a QAT sweep.
 - **MLPs are small and trained to convergence on a dense grid.** Larger or differently regularized networks could shift the frontier but not cross the symbolic point at the accuracies observed here.
@@ -179,7 +197,8 @@ Exact reproduction commands:
 python -m mlp.train_mlp           # 8-seed H×depth sweep -> results/mlp/ + train_summary.csv
 python -m mlp.run_mlp             # emit core + stream RTL for every (best-seed) cell
 python -m mlp.sim_check_mlp       # bit-exact 256/256 (Icarus), all cells
-python -m mlp.rom_baseline        # direct-ROM spec/error table (§4.3)
+python -m mlp.rom_baseline        # direct-ROM spec/error table, 1-D (§4.3) + 2-D arity sweep (§4.4)
+python -m mlp.symbolic_2in        # 2-input symbolic unit exp(x)-ln(y): error report + RTL (§4.4)
 python -m mlp.synth_sweep         # yosys+nextpnr -> results/mlp_pareto.csv (+ _meta.txt; incl. ROM rows)
 python -m mlp.make_pareto_figure  # notes/figure_symbolic_vs_mlp.png
 python -m pytest tests/test_mlp_hardware.py -q
