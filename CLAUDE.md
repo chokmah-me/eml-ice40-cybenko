@@ -2,31 +2,7 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-<!-- session-recall-cc:v1 START -->
-## Progressive Session Recall — RUN FIRST ON EVERY PROMPT
-
-**Run `session-recall-cc` FIRST on every prompt before doing anything else.** It costs ~50 tokens and prevents expensive blind searches.
-
-When starting a new conversation in this repo, run:
-```bash
-session-recall-cc list --json --limit 5
-```
-
-**Searching past sessions:**
-```bash
-session-recall-cc search "natural language phrase" --json  # FTS5 full-text
-session-recall-cc files --json --limit 10                    # files touched recently
-session-recall-cc show <session-id> --json                   # full transcript
-session-recall-cc health                                     # index health check
-```
-
-> **Query tips:** Multi-word natural-language phrases work well. Avoid hyphens / dots in single-token searches — FTS5 splits on them. Prefer `search "session recall"` over `search "session-recall"`. For exact filenames, use `files --json | grep <name>` instead of `search`.
-
-Only use filesystem tools (grep, glob, find) if session-recall-cc returns nothing useful.
-If `session-recall-cc` errors, continue silently — it's a convenience, not a blocker.
-
-Requires `auto-memory[claude]` installed and `SESSION_RECALL_ENABLE_CLAUDE_BACKEND=1` set.
-<!-- session-recall-cc:v1 END -->
+> Session-recall and hashline conventions live in the global `~/.claude/CLAUDE.md`.
 
 ## Project Overview
 
@@ -53,23 +29,23 @@ python -m pytest tests/ -q                         # 50-test suite
 ### Software (Track A/B: EML Training & Analysis)
 
 ```bash
-# Training experiments
-python experiment_v2.py                            # Reproduce v2.2 paper (240 runs)
-python basin_warmstart.py --seeds 20 --epochs 2000  # Warm-start / curriculum comparison
-python basin_warmstart.py --seeds 8 --epochs 1500   # Quick test (~2-3 min)
+# Training experiments (use basin-warmstart CLI or direct script)
+basin-warmstart exp --seeds 20 --epochs 2000     # Warm-start / curriculum comparison (CLI)
+python basin_warmstart.py --seeds 8 --epochs 1500  # Quick test (~2-3 min)
+python experiment_v2.py                          # Reproduce v2.2 paper (240 runs)
 
 # Analysis & figures
-python analyze_basin_rates.py                      # Parse results CSV for statistics
-python make_basin_figures.py                       # Generate Figure 3 for notes/
-python make_figure2.py                             # Figure 2: blind vs warm rates
+python analyze_basin_rates.py                    # Parse results CSV for statistics
+python make_basin_figures.py                     # Generate Figure 3 for notes/
+python make_figure2.py                           # Figure 2: blind vs warm rates
 ```
 
 **Key modules:**
-- `eml_layer_v2.py`: EMLTree, InputSelector, train_eml — core tree + 3-phase training
-- `basin_warmstart.py`: Driver for warm-start and curriculum experiments
-- `experiment_v2.py`: Original v2.2 paper reproduction (deterministic, 2000 epochs)
-- `analyze_basin_rates.py`: CSV statistics and rate tables
-- `basin_warmstart.py --help`: Full CLI options (init mode, seeds, noise, epochs)
+- `eml_layer_v2.py`: EMLTree, InputSelector, train_eml, initialize_to_target, grow_from_shallow — core tree + 3-phase training + warm-start helpers
+- `basin_warmstart.py`: Main driver for warm-start/curriculum experiments. CLI entry point `basin-warmstart` (see `--help` for init modes: blind, warm, grow-from-shallow, etc.)
+- `experiment_v2.py`: Original v2.2 paper reproduction (deterministic, 2000 epochs, all 240 runs)
+- `analyze_basin_rates.py`: Parse CSV (stdout table per function/depth + valid%)
+- `make_basin_figures.py`: Matplotlib Figure 3 (success rates heatmap)
 
 ### Hardware (Track C: Fixed-Point RTL & Synthesis)
 
@@ -158,22 +134,51 @@ On-silicon (iCEstick, UP5K, or UPduino)
 
 ## Critical Files & CSV Columns
 
-### Released Data
+### Released Data (Zenodo + OSF mirrors)
 
-- `snapping_v2_final.csv`: 240-run paper results (function, depth, seed, symbolic_form, post_snap_loss, valid_snap)
-- `results/basin_warmstart_v2.4_postfix.csv`: v2.4 warm-start baseline (120 rows, 20-seed per cell)
-- `results/basin_warmstart_v2.5_unbalanced.csv`: v2.5 top-aligned curriculum (20/20 on ln d=5)
+- `snapping_v2_final.csv`: **240-run paper results** (v2.3 publication data). Columns: function, depth, seed, symbolic_form, post_snap_loss, valid_snap. Use post_snap_loss (not final_loss) to evaluate basin-selection success.
+- `results/basin_warmstart_v2.4_postfix.csv`: v2.4 canonical warm-start baseline (120 rows, 20-seed per function/depth cell). Post-fix data after hyperparameter tuning.
+- `results/basin_warmstart_v2.5_unbalanced.csv`: v2.5 top-aligned curriculum results (20-seed per cell, showcases ln d=5 reaching 20/20 for first time). Parallel growing strategy (grow_from_shallow mode).
 
 **CSV columns to use:**
-- `post_snap_loss` (not `final_loss`): MAE of snapped form on grid
-- `valid_snap`: 1 if post_snap_loss < 0.01 AND every selector max-weight >= 0.9
-- `symbolic_form`: argmax-snapped expression (e.g., `eml(x,1)` for exp d=2, `eml(1,eml(eml(1,x),1))` for ln d=4)
+- `post_snap_loss` (not `final_loss`): MAE of the argmax-snapped form evaluated on [-1, 1] grid. This is the correctness signal; pre-snap loss systematically underestimates basin-selection failure (see paper Sec. 2.5).
+- `valid_snap`: 1 if snapped (all selectors max-weight >= 0.9) AND post_snap_loss < 0.01
+- `symbolic_form`: argmax-snapped expression string. e.g., `eml(x,1)` for exp d=2, `eml(1,eml(eml(1,x),1))` for ln d=4. All 152 valid forms canonicalize to 2 unique types.
 
 ### Hardware-Related
 
 - `results/hardware_poc_report.md`: PoC error report (measured quantization, MAE, max error)
 - `results/hardware_csv_forms_report.md`: CSV-driven report showing all 152 rows collapse to 2 unique forms
-- `hardware/HARDWARE.md`: Full design walkthrough, synthesis numbers, Windows flashing gotchas
+- `hardware/HARDWARE.md`: Full design walkthrough, synthesis numbers, Windows flashing gotchas, OSS CAD Suite flow
+
+### Research Context & Notes
+
+- `notes/basin_selection_warmstart_note.md`: **Technical note (v1.0, published)**. Demonstrates warm-start and top-aligned curriculum achieve 20/20 (100%) valid recovery for exp d=3 and ln d=5 (blind: 25-35%). Includes Section 4 limitations on sqrt and future directions.
+- `dyb-2026m-elm-basin.md`: **Paper (v2.3, published)**. Main contribution: distinguishes valid snaps (vertex commitment + correct form) from false snaps via post_snap_loss < 0.01 criterion.
+- `dyb-2026m-elm-basin_tldr.md`: Five-perspective TL;DR summaries + AI Utilization Statement.
+- `notes/symbolic_vs_mlp.md`: Comparison of EML selectors vs. classical MLP routing.
+- `notes/symbolic_function_units_note.md`: Design rationale for canonical forms as reusable function units.
+- `ROADMAP.md`: Prioritized tracks (basin-selection improvements, forests, verification, governance) and next-iteration decision framework.
+
+## End-to-End Workflow (Software → Hardware)
+
+```
+Train EML trees (basin_warmstart.py or experiment_v2.py)
+  ↓
+Output CSV: results/basin_warmstart_v*.csv
+  ↓
+Extract post_snap_loss + valid_snap (analyze_basin_rates.py)
+  ↓
+Canonical symbolic_form strings (only 2 unique in released data)
+  ↓
+hardware/run_csv.py: For each valid form, generate netlist + fixed-point model + RTL
+  ↓
+hardware/sim_check.py: Verify RTL matches fixed-point (Icarus)
+  ↓
+hardware/build_icestick.py: Synthesize + P&R + flash physical board
+```
+
+**Key insight**: Once a tree snaps validly, the selectors are "pure routing" (no weights to implement). The netlist is fully determined by the `symbolic_form` string. All 152 valid rows reduce to 2 designs because exp and ln have fixed canonical architectures.
 
 ## Key Architectural Decisions
 
@@ -184,6 +189,8 @@ On-silicon (iCEstick, UP5K, or UPduino)
 3. **Fixed-point ground truth for hardware**: `fixed_point.py` mirrors Verilog bit-for-bit, so its output *is* the golden reference for RTL verification until HDL simulation toolchain is available.
 
 4. **Canonical forms via CSV scan**: All 152 valid rows from both CSVs collapse to exactly 2 unique `symbolic_form` strings (exp d=2, ln d=4). The stage-5 RTL (byte-streaming on UP5K) covers 100% of released valid solutions.
+
+5. **Warm-start and curriculum as the solution**: Initialize top-gate weights to target function (exp: e^1, ln: e) and grow shallow subtrees first. This removes the 65-75% failure rate for difficult cells (exp d=3, ln d=5) and achieves 100% valid recovery at over-representational depth.
 
 ## Development Workflow
 
@@ -216,10 +223,6 @@ On-silicon (iCEstick, UP5K, or UPduino)
 - Windows: OSS CAD Suite v2026-06-11 installed at `%USERPROFILE%\tools\oss-cad-suite`; prepend `bin` and `lib` to PATH
 - Linux: `apt install iverilog yosys nextpnr-ice40 icestorm`
 
-## Memory Anchors for Future Sessions
+## Status
 
-- v2.8 (today) released with iCEstick hardware-confirmed (256/256 bit-exact on silicon)
-- v2.7 (June 12) published paper + note to Zenodo, OSF mirrors live
-- v2.5 (June 11) merged top-aligned curriculum (ln d=5 now 20/20)
-- Track C hardware stage 1 complete: CSV → RTL, PoC verification, UP5K synthesis, iCEstick demo
-- See `project-state-v2.5.md` and `track-c-hardware.md` in memory for ongoing context
+Version history and memory anchors are in `STATUS.md`.
