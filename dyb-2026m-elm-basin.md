@@ -99,15 +99,15 @@ Mean max-weight across selectors (our "snappability" metric) is 1.000 for every 
 | ln(x)   | 0    | 0    | 18   | 5    | 4                      |
 | sqrt(x) | 0    | 0    | 0    | 0    | 9+                     |
 
-![Figure 1: Valid snap rate by function and depth. Cell entries give valid-snap count / total non-NaN runs. Black borders mark each function's minimum representational depth.](./figure1_heatmap_v2.png)
+![Figure 1: Valid snap counts and rates by function and depth. Asterisk marks each function's minimum representational depth.](./figure1_heatmap_v2.png)
 
 Three patterns:
 
 **ln(x) peaks at representational depth.** 18 of 20 seeds at d=4 recover the exact form eml(1,eml(eml(1,x),1)) with post_snap_loss = 0 to numerical precision (mean 3e-8). At d=2 and d=3 the tree cannot express ln(x) at all; valid snap rate is 0/20 as expected. At d=5, valid snap rate drops to 5/20: the tree can still express ln(x), but there are more ways to misplace the three required gate levels.
 
-**exp(x) improves with depth.** The minimal depth (2) is the worst performer, not the best. At d=2 the recovery rate is 5/20 because a single competing basin, eml(x,x), traps 75% of seeds (see Section 3.3). Deeper trees correlate with escape from this basin: at d=4 the recovery rate is 17/20 and all valid snaps take the form eml(x,1) with unused subtrees collapsing to constants. At d=5, recovery rate is 11/18 (61%), still well above d=2. Figure 1 visualizes these rates as a heatmap; the representational-depth cell for each function is marked.
+**exp(x) improves with depth.** The minimal depth (2) is the worst performer, not the best. At d=2 the recovery rate is 5/20 because a single competing basin, eml(x,x), traps 75% of seeds (see Section 3.3). Deeper trees correlate with escape from this basin: at d=4 the recovery rate is 17/20 and all valid snaps take the form eml(x,1) with unused subtrees collapsing to constants. At d=5, recovery rate is 11/18 (61%), still well above d=2.
 
-**sqrt(x) is a falsification check.** No depth we test can represent sqrt, and no run produces a valid snap. This confirms the criterion does not simply track "did training converge?" The continuous optimizer finds reasonable fits (pre-snap MAE 0.078 at d=4) but no vertex configuration matches sqrt, so snapping destroys the fit every time.
+**sqrt(x) is a falsification check.** No depth we test can represent sqrt, and no run produces a valid snap. This confirms the criterion does not simply track "did training converge?" The continuous optimizer finds reasonable fits (pre-snap MAE 0.078 at d=4) but no vertex configuration matches sqrt, so snapping destroys the fit every time. Figure 1 is the table of these twelve cells; color encoding added nothing the counts do not already say.
 
 ### 3.3 False snaps cluster in identifiable basins
 

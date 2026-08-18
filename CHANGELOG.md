@@ -1,5 +1,12 @@
 # Changelog
 
+- **Unreleased** (2026-08-17): Tufte figure pass. No data change.
+  - `figure1_heatmap_v2.png` is now a table of the 12 valid-snap cells
+    (Table 1 already printed the counts). New `make_figure1.py`.
+  - `figure2_rate_comparison.png` is a Cleveland dot plot; `make_figure2.py`
+    writes into the repo (was a `/home/claude/` path).
+  - Paper caption no longer calls Fig. 1 a heatmap. Paper PDF not rebuilt.
+
 - **v2.8** (2026-06-16): Physical iCEstick (iCE40-HX1K) board demo of the exp d=2
   core, hardware-confirmed bit-exact (256/256).
   - New UART bridge RTL: `hardware/rtl/icestick_exp_top.v` wraps the unmodified
