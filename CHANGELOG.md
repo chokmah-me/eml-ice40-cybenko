@@ -5,7 +5,7 @@
     (Table 1 already printed the counts). New `make_figure1.py`.
   - `figure2_rate_comparison.png` is a Cleveland dot plot; `make_figure2.py`
     writes into the repo (was a `/home/claude/` path).
-  - Paper caption no longer calls Fig. 1 a heatmap. Paper PDF not rebuilt.
+  - Fig. 2 caption updated; `dyb-2026m-elm-basin.pdf` rebuilt in Typora.
 
 - **v2.8** (2026-06-16): Physical iCEstick (iCE40-HX1K) board demo of the exp d=2
   core, hardware-confirmed bit-exact (256/256).

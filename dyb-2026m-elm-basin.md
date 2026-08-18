@@ -8,7 +8,7 @@ footer: "Page ${pageNo} / ${totalPages}"
 
 # Valid and False Snapping in EML Expression Trees: The Basin Selection Problem
 
-by **Daniyel Yaacov Bilar**, Chokmah LLC, chokmah-dyb@pm.me , ORCID: 0000-0002-9040-6914
+by **Daniyel Yaacov Bilar**, Chokmah LLC, chokmah-dyb@pm.me ORCID: [0000-0002-9040-6914](https://orcid.org/0000-0002-9040-6914)
 
 v2.3 June 12 2026 (v2.1: SI warm-start subsection + Figure 2. v2.2: responds to review feedback: tones down novelty framing re Odrzywolek, removes unsupported gradient-escape mechanism claim, softens "solves completely" to tested-conditions, explains 0.000 variance. v2.3: aligns remaining mechanism language with the Section 3.4 disclaimer, trims abstract)
 
@@ -153,7 +153,7 @@ A direct rate comparison is informative but requires care because the target fun
 | This work, blind runs, exp(x), representational depth 2    | 25%  | 20%   | 85%   | 61%   |
 | This work, blind runs, ln(x), representational depth 4     | 0%   | 0%    | 90%   | 25%   |
 
-![Figure 2: Blind-recovery rate comparison. Grouped bars show blind-initialization success rates from Odrzywolek SI Table S5 (grey; target depth matches tree depth) and this work (orange = exp(x) at representational depth 2; blue = ln(x) at representational depth 4). Black stars mark the matched-depth cells. Denominators: Odrzywolek 32, 64, 64, 448; this work 20 except exp d=5 (18 after NaN).](./figure2_rate_comparison.png)
+![Figure 2: Blind-recovery rate comparison. Cleveland dots, three small multiples on a shared 0–100% axis: Odrzywolek SI Table S5 (target depth = tree depth) and this work for exp(x) (representational depth 2) and ln(x) (representational depth 4). Asterisk marks this work at representational depth. Denominators: Odrzywolek 32, 64, 64, 448; this work 20 except exp d=5 (18 after NaN).](./figure2_rate_comparison.png)
 
 The patterns are consistent once representational depth is controlled. When the tree exactly matches the target's representational depth (Odrzywolek at every row; our ln at d=4) recovery is high. When the tree is over-depth, the consequence depends on basin geometry: for our exp(x) the extra gates are associated with escape from the eml(x,x) competitor (d=4 peak at 85%; mechanism not established, see Section 3.4); for Odrzywolek's self-composition targets at d>=5 the combinatorial count of incorrect forms dominates and recovery collapses.
 
